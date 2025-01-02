@@ -1,0 +1,61 @@
+﻿@using Microsoft.EntityFrameworkCore
+@using PersonalFinanceApp.Data
+@rendermode InteractiveServer
+
+@page "/register"
+@inject NavigationManager UriHelper
+@inject AppDbContext DbContext
+
+<h3>Register</h3>
+
+<div>
+    <input class="m-3" placeholder="Enter username" @bind="UserName" />
+</div>
+<div>
+    <input type="password" class="m-3" placeholder="Enter password" @bind="Password" />
+</div>
+<div>
+    <input type="password" class="m-3" placeholder="Confirm password" @bind="ConfirmPassword" />
+</div>
+<button class="btn btn-primary m-3" @onclick="RegisterUser">Register</button>
+
+@if (!string.IsNullOrEmpty(PasswordError))
+{
+    <p style="color: red;">@PasswordError</p>
+}
+
+@code {
+    private string UserName { get; set; }
+    private string Password { get; set; }
+    private string ConfirmPassword { get; set; }
+    private string PasswordError { get; set; }
+
+    private async Task RegisterUser()
+    {
+        PasswordError = string.Empty;
+
+        if (Password != ConfirmPassword)
+        {
+            PasswordError = "Passwords do not match.";
+            return;
+        }
+
+        var existingUser = await DbContext.Users
+            .FirstOrDefaultAsync(u => u.UserName == UserName);
+
+        if (existingUser != null)
+        {
+            PasswordError = "User already exists.";
+            return;
+        }
+        var newUser = new User
+            {
+                UserName = UserName,
+                Password = Password
+            };
+
+        DbContext.Users.Add(newUser);
+        await DbContext.SaveChangesAsync();
+        UriHelper.NavigateTo("/login");
+    }
+}

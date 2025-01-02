@@ -1,0 +1,47 @@
+﻿@using Microsoft.EntityFrameworkCore
+@using PersonalFinanceApp.Data
+@rendermode InteractiveServer
+@inject NavigationManager UriHelper
+@inject AppDbContext DbContext
+@page "/login"
+
+<h3>Login</h3>
+
+@if (!string.IsNullOrEmpty(ErrorMessage))
+{
+    <div class="alert alert-danger">@ErrorMessage</div>
+}
+
+<div>
+    <input class="m-3" placeholder="Enter username" @bind="UserName" />
+</div>
+<div>
+    <input type="password" class="m-3" placeholder="Enter password" @bind="Password" />
+</div>
+<button class="btn btn-primary m-3" @onclick="LoginUser">Login</button>
+
+@code {
+    private string UserName { get; set; }
+    private string Password { get; set; }
+    private string ErrorMessage { get; set; }
+
+    private async Task LoginUser()
+    {
+        ErrorMessage = null;
+        var user = await DbContext.Users
+            .FirstOrDefaultAsync(u => u.UserName == UserName);
+
+        if (user == null)
+        {
+            ErrorMessage = "Invalid username or password.";
+            return;
+        }
+        if (user.Password != Password)
+        {
+            ErrorMessage = "Invalid username or password.";
+            return;
+        }
+
+        UriHelper.NavigateTo("/weather");
+    }
+}
