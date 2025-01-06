@@ -6,23 +6,10 @@
 @inject IJSRuntime JSRuntime
 @inject NavigationManager UriHelper
 @inject AppDbContext DbContext
+@inject IServiceProvider ServiceProvider
 @rendermode InteractiveServer
 
 <h3>Welcome to Your Dashboard</h3>
-
-@if (Transactions.Any())
-{
-    <ul>
-        @foreach (var transaction in Transactions)
-        {
-            <li>@transaction.Description - @transaction.Amount</li>
-        }
-    </ul>
-}
-else
-{
-    <p>No transactions found.</p>
-}
 
 @if (string.IsNullOrEmpty(UserName))
 {
@@ -31,47 +18,367 @@ else
 else
 {
     <p>Welcome, @UserName!</p>
+    <h4>Your Current Balance: €@Balance</h4>
+
+    <div class="balance-controls">
+        <button class="btn btn-warning" @onclick="ToggleManualBalanceForm">Add to Balance</button>
+        <button class="btn btn-danger" @onclick="ResetBalance">Reset Balance</button>
+    </div>
+
+    @if (IsManualBalanceVisible)
+    {
+        <div class="manual-balance-form">
+            <EditForm Model="@manualBalance" OnValidSubmit="HandleManualBalanceSubmit">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+                <div class="form-group">
+                    <label for="balanceAmount">Amount</label>
+                    <InputNumber id="balanceAmount" @bind-Value="manualBalance.Amount" class="form-control" />
+                </div>
+                <button type="submit" class="btn btn-success">Add Balance</button>
+            </EditForm>
+        </div>
+    }
 
     <div class="user-info">
-        <p>Your recent transactions:</p>
-        <ul>
-            @foreach (var transaction in Transactions)
-            {
-                <li>@transaction.Description - @transaction.Amount</li>
-            }
-        </ul>
+        <h5>Your Recent Transactions:</h5>
+        <div>
+            <h6>Filter By:</h6>
+            <InputSelect @bind-Value="selectedFilterOption" class="form-control" @onchange="FilterTransactions">
+                <option value="All">All</option>
+                <option value="Income">Income</option>
+                <option value="Expense">Expense</option>
+                @foreach (var category in Categories)
+                {
+                    <option value="@category">@category</option>
+                }
+            </InputSelect>
+        </div>
+
+        @if (FilteredTransactions.Any())
+        {
+            <ul>
+                @foreach (var transaction in FilteredTransactions)
+                {
+                    <li>
+                        @transaction.Description - @transaction.Amount (€@transaction.Type) on @transaction.Date.ToString("yyyy-MM-dd")
+                        <button class="btn btn-danger btn-sm" @onclick="() => ShowDeleteConfirmation(transaction)">Delete</button>
+                    </li>
+                }
+            </ul>
+        }
+        else
+        {
+            <p>No transactions found.</p>
+        }
     </div>
+
+    @if (IsDeleteConfirmationVisible)
+    {
+        <div class="delete-confirmation-popup">
+            <h4>Are you sure you want to delete this transaction?</h4>
+            <button class="btn btn-danger" @onclick="DeleteTransaction">Yes, Delete Transaction</button>
+            <button class="btn btn-secondary" @onclick="CancelDelete">Cancel</button>
+        </div>
+    }
+
+    <button class="btn btn-primary" @onclick="ShowTransactionForm">Add Transaction</button>
+
+    @if (IsTransactionFormVisible)
+    {
+        <div class="transaction-form">
+            <h5>Add New Transaction</h5>
+            <EditForm Model="@newTransaction" OnValidSubmit="HandleValidSubmit">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <InputText id="description" @bind-Value="newTransaction.Description" class="form-control" />
+                </div>
+                <div class="form-group">
+                    <label for="amount">Amount</label>
+                    <InputNumber id="amount" @bind-Value="newTransaction.Amount" class="form-control" />
+                </div>
+                <div class="form-group">
+                    <label for="category">Category</label>
+                    <InputSelect id="category" @bind-Value="newTransaction.Category" class="form-control">
+                        <option value="">Select a Category</option>
+                        @foreach (var category in Categories)
+                        {
+                            <option value="@category">@category</option>
+                        }
+                    </InputSelect>
+                </div>
+
+                <div class="form-group">
+                    <label for="type">Type</label>
+                    <InputSelect id="type" @bind-Value="newTransaction.Type" class="form-control">
+                        <option value="Income">Income</option>
+                        <option value="Expense">Expense</option>
+                    </InputSelect>
+                </div>
+                <div class="form-group">
+                    <label for="date">Date</label>
+                    <InputDate id="date" @bind-Value="newTransaction.Date" class="form-control" />
+                </div>
+
+                <button type="submit" class="btn btn-success">Save Transaction</button>
+            </EditForm>
+        </div>
+    }
 
     <button class="btn btn-primary" @onclick="Logout">Logout</button>
 }
 
 @code {
     private string UserName { get; set; }
+    private decimal Balance { get; set; }
     private List<Transaction> Transactions { get; set; } = new List<Transaction>();
+    private List<Transaction> FilteredTransactions { get; set; } = new List<Transaction>(); // Filtered list
+    private bool IsTransactionFormVisible { get; set; } = false;
+    private bool IsManualBalanceVisible { get; set; } = false;
+    private bool IsDeleteConfirmationVisible { get; set; } = false;
+    private Transaction TransactionToDelete { get; set; }
+
+    private List<string> Categories { get; set; } = new List<string>
+    {
+        "Housing", "Food", "Transportation", "Health & Medical", "Insurance", "Entertainment",
+        "Clothing", "Personal Care", "Education", "Debt Repayment", "Savings & Investments",
+        "Childcare", "Pets", "Travel"
+    };
+
+    private string selectedFilterOption = "All";
+    private Transaction newTransaction = new Transaction();
+    private Transaction manualBalance = new Transaction();
+    private bool isDatabaseOperationInProgress = false;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (firstRender && !isDatabaseOperationInProgress)
         {
-            UserName = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "userName");
-            if (string.IsNullOrEmpty(UserName))
+            isDatabaseOperationInProgress = true;
+            try
             {
-                UriHelper.NavigateTo("/login");
-            }
-            else
-            {
-                Transactions = await DbContext.Transactions
-                    .Where(t => t.UserName == UserName)
-                    .ToListAsync();
+                UserName = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "userName");
 
-                StateHasChanged();
+                if (string.IsNullOrEmpty(UserName))
+                {
+                    UriHelper.NavigateTo("/login");
+                }
+                else
+                {
+                    await LoadUserDataAsync();
+                }
             }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error: {ex.Message}");
+            }
+            finally
+            {
+                isDatabaseOperationInProgress = false;
+            }
+
+            StateHasChanged();
         }
+    }
+
+    private async Task LoadUserDataAsync()
+    {
+        Transactions = await DbContext.Transactions
+            .Where(t => t.UserName == UserName)
+            .ToListAsync();
+
+        FilteredTransactions = new List<Transaction>(Transactions); // Initially, no filter is applied
+        Balance = Transactions.Sum(t => t.Amount);
+    }
+
+    private void ToggleManualBalanceForm()
+    {
+        IsManualBalanceVisible = !IsManualBalanceVisible;
+    }
+
+    private async Task HandleManualBalanceSubmit()
+    {
+        if (manualBalance.Amount <= 0) return;
+
+        var manualTransaction = new Transaction
+            {
+                UserName = UserName,
+                Amount = manualBalance.Amount,
+                Category = "Manual Balance",
+                Type = "Income",
+                Date = DateTime.Now,
+                Description = "Manual Balance Addition"
+            };
+
+        Balance += manualBalance.Amount;
+
+        DbContext.Transactions.Add(manualTransaction);
+        await DbContext.SaveChangesAsync();
+
+        Transactions.Add(manualTransaction);
+        FilteredTransactions.Add(manualTransaction);
+        manualBalance = new Transaction();
+        IsManualBalanceVisible = false;
+
+        StateHasChanged();
+    }
+
+    private void ShowTransactionForm()
+    {
+        IsTransactionFormVisible = true;
+        newTransaction.Date = DateTime.Now;
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (isDatabaseOperationInProgress || string.IsNullOrEmpty(newTransaction.Description) || newTransaction.Amount == 0 || newTransaction.Date == default)
+        {
+            return;
+        }
+
+        // Ensure Type is set (either "Income" or "Expense")
+        if (string.IsNullOrEmpty(newTransaction.Type))
+        {
+            // Log for debugging
+            Console.WriteLine("Transaction Type is empty! Setting default type to Expense.");
+
+            // Default it to "Expense" (can be replaced with logic to set it based on user input)
+            newTransaction.Type = "Expense";
+        }
+
+        // Log the type and amount for debugging
+        Console.WriteLine($"Transaction Type: {newTransaction.Type}, Amount: {newTransaction.Amount}");
+
+        isDatabaseOperationInProgress = true;
+
+        try
+        {
+            newTransaction.UserName = UserName;
+            DbContext.Transactions.Add(newTransaction);
+
+            // Check the type and adjust balance accordingly
+            if (newTransaction.Type == "Income")
+            {
+                // Log to confirm we're hitting this block for Income
+                Console.WriteLine("Processing Income...");
+                Balance += newTransaction.Amount; // Add amount to balance for Income
+            }
+            else if (newTransaction.Type == "Expense")
+            {
+                // Log to confirm we're hitting this block for Expense
+                Console.WriteLine("Processing Expense...");
+                Balance -= newTransaction.Amount; // Subtract amount from balance for Expense
+            }
+
+            // Save to database
+            await DbContext.SaveChangesAsync();
+
+            // Add the transaction to the list to display
+            Transactions.Add(newTransaction);
+
+            // Reset the form for a new transaction
+            newTransaction = new Transaction();
+            IsTransactionFormVisible = false;
+
+            // Log the updated balance
+            Console.WriteLine($"Updated Balance: {Balance}");
+
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+        finally
+        {
+            isDatabaseOperationInProgress = false;
+        }
+
+        StateHasChanged();
+    }
+
+    private void FilterTransactions(ChangeEventArgs e)
+    {
+        var filterOption = e.Value.ToString();
+        if (filterOption == "All")
+        {
+            FilteredTransactions = new List<Transaction>(Transactions); // No filter, show all
+        }
+        else if (filterOption == "Income")
+        {
+            FilteredTransactions = Transactions.Where(t => t.Type == "Income").ToList();
+        }
+        else if (filterOption == "Expense")
+        {
+            FilteredTransactions = Transactions.Where(t => t.Type == "Expense").ToList();
+        }
+        else if (Categories.Contains(filterOption))
+        {
+            FilteredTransactions = Transactions.Where(t => t.Category == filterOption).ToList();
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task ResetBalance()
+    {
+        Balance = 0;
+        Transactions.Clear();
+
+        var resetTransaction = new Transaction
+            {
+                UserName = UserName,
+                Amount = 0,
+                Category = "Balance Reset",
+                Type = "Expense",
+                Date = DateTime.Now,
+                Description = "Balance Reset"
+            };
+
+        DbContext.Transactions.Add(resetTransaction);
+        await DbContext.SaveChangesAsync();
+
+        StateHasChanged();
     }
 
     private async Task Logout()
     {
         await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "userName");
         UriHelper.NavigateTo("/login");
+    }
+
+    private void ShowDeleteConfirmation(Transaction transaction)
+    {
+        TransactionToDelete = transaction;
+        IsDeleteConfirmationVisible = true;
+    }
+
+    private async Task DeleteTransaction()
+    {
+        if (TransactionToDelete == null) return;
+
+        if (TransactionToDelete.Type == "Income")
+        {
+            Balance -= TransactionToDelete.Amount;
+        }
+        else if (TransactionToDelete.Type == "Expense")
+        {
+            Balance += TransactionToDelete.Amount;
+        }
+
+        DbContext.Transactions.Remove(TransactionToDelete);
+        await DbContext.SaveChangesAsync();
+
+        await LoadUserDataAsync();
+
+        IsDeleteConfirmationVisible = false;
+        StateHasChanged();
+    }
+
+    private void CancelDelete()
+    {
+        IsDeleteConfirmationVisible = false;
+        StateHasChanged();
     }
 }
