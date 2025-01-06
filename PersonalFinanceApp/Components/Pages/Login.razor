@@ -3,6 +3,8 @@
 @rendermode InteractiveServer
 @inject NavigationManager UriHelper
 @inject AppDbContext DbContext
+@inject IJSRuntime JSRuntime
+ 
 @page "/login"
 
 <h3>Login</h3>
@@ -42,6 +44,8 @@
             return;
         }
 
-        UriHelper.NavigateTo("/weather");
+        await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "userName", UserName);
+
+        UriHelper.NavigateTo("/dashboard");
     }
 }

@@ -1,0 +1,77 @@
+﻿@using Microsoft.EntityFrameworkCore
+@using PersonalFinanceApp.Data
+@using Microsoft.JSInterop
+
+@page "/dashboard"
+@inject IJSRuntime JSRuntime
+@inject NavigationManager UriHelper
+@inject AppDbContext DbContext
+@rendermode InteractiveServer
+
+<h3>Welcome to Your Dashboard</h3>
+
+@if (Transactions.Any())
+{
+    <ul>
+        @foreach (var transaction in Transactions)
+        {
+            <li>@transaction.Description - @transaction.Amount</li>
+        }
+    </ul>
+}
+else
+{
+    <p>No transactions found.</p>
+}
+
+@if (string.IsNullOrEmpty(UserName))
+{
+    <p>Loading...</p>
+}
+else
+{
+    <p>Welcome, @UserName!</p>
+
+    <div class="user-info">
+        <p>Your recent transactions:</p>
+        <ul>
+            @foreach (var transaction in Transactions)
+            {
+                <li>@transaction.Description - @transaction.Amount</li>
+            }
+        </ul>
+    </div>
+
+    <button class="btn btn-primary" @onclick="Logout">Logout</button>
+}
+
+@code {
+    private string UserName { get; set; }
+    private List<Transaction> Transactions { get; set; } = new List<Transaction>();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            UserName = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "userName");
+            if (string.IsNullOrEmpty(UserName))
+            {
+                UriHelper.NavigateTo("/login");
+            }
+            else
+            {
+                Transactions = await DbContext.Transactions
+                    .Where(t => t.UserName == UserName)
+                    .ToListAsync();
+
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task Logout()
+    {
+        await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "userName");
+        UriHelper.NavigateTo("/login");
+    }
+}
