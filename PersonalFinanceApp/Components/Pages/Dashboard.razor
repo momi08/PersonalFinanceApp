@@ -1,6 +1,7 @@
-﻿@using Microsoft.EntityFrameworkCore
-@using PersonalFinanceApp.Data
+﻿@using PersonalFinanceApp.Data
+@using Microsoft.EntityFrameworkCore
 @using Microsoft.JSInterop
+@inject Pagination<Transaction> Pagination
 
 @page "/dashboard"
 @inject IJSRuntime JSRuntime
@@ -43,8 +44,8 @@ else
     <div class="user-info">
         <h5>Your Recent Transactions:</h5>
         <div>
-            <h6>Filter By:</h6>
-            <InputSelect @bind-Value="selectedFilterOption" class="form-control" @onchange="FilterTransactions">
+            <h5>Filter By:</h5>
+            <InputSelect @bind-Value="selectedFilterOption" class="form-control">
                 <option value="All">All</option>
                 <option value="Income">Income</option>
                 <option value="Expense">Expense</option>
@@ -53,19 +54,27 @@ else
                     <option value="@category">@category</option>
                 }
             </InputSelect>
+            <button class="btn btn-primary mt-2" @onclick="ApplyFilter">Apply Filter</button>
         </div>
 
-        @if (FilteredTransactions.Any())
+        @if (Pagination.CurrentPageItems.Any())
         {
             <ul>
-                @foreach (var transaction in FilteredTransactions)
+                @foreach (var transaction in Pagination.CurrentPageItems)
                 {
                     <li>
-                        @transaction.Description - @transaction.Amount (€@transaction.Type) on @transaction.Date.ToString("yyyy-MM-dd")
+                        @transaction.Description - @transaction.Amount (€@transaction.Type) on @transaction.Date.ToString("yyyy-MM-dd HH:mm:ss")
                         <button class="btn btn-danger btn-sm" @onclick="() => ShowDeleteConfirmation(transaction)">Delete</button>
                     </li>
                 }
             </ul>
+
+            <!-- Pagination Controls -->
+            <div class="pagination-controls">
+                <button class="btn btn-secondary" @onclick="Pagination.PreviousPage" disabled="@(!Pagination.HasPreviousPage())">Previous</button>
+                <span>Page @Pagination.PageIndex + 1 of @Pagination.TotalPages</span>
+                <button class="btn btn-secondary" @onclick="Pagination.NextPage" disabled="@(!Pagination.HasNextPage())">Next</button>
+            </div>
         }
         else
         {
@@ -187,17 +196,23 @@ else
     {
         Transactions = await DbContext.Transactions
             .Where(t => t.UserName == UserName)
+            .OrderByDescending(t => t.Date) // Sort by most recent first
             .ToListAsync();
 
-        FilteredTransactions = new List<Transaction>(Transactions); // Initially, no filter is applied
-        Balance = Transactions.Sum(t => t.Amount);
+        // Initialize pagination with all transactions
+        Pagination.SetPagination(Transactions);
+        Balance = Transactions
+            .Where(t => t.UserName == UserName)
+            .Sum(t => t.Type == "Income" ? t.Amount : -t.Amount);
     }
 
+    // Toggle the visibility of the manual balance form
     private void ToggleManualBalanceForm()
     {
         IsManualBalanceVisible = !IsManualBalanceVisible;
     }
 
+    // Handle submission of manual balance addition
     private async Task HandleManualBalanceSubmit()
     {
         if (manualBalance.Amount <= 0) return;
@@ -218,92 +233,28 @@ else
         await DbContext.SaveChangesAsync();
 
         Transactions.Add(manualTransaction);
-        FilteredTransactions.Add(manualTransaction);
+        Pagination.SetPagination(Transactions); // Update pagination after adding transaction
         manualBalance = new Transaction();
         IsManualBalanceVisible = false;
 
         StateHasChanged();
     }
 
+    // Show the transaction form
     private void ShowTransactionForm()
     {
         IsTransactionFormVisible = true;
         newTransaction.Date = DateTime.Now;
     }
 
-    private async Task HandleValidSubmit()
+    // Apply filter when "Apply Filter" button is clicked
+    private void ApplyFilter()
     {
-        if (isDatabaseOperationInProgress || string.IsNullOrEmpty(newTransaction.Description) || newTransaction.Amount == 0 || newTransaction.Date == default)
-        {
-            return;
-        }
+        var filterOption = selectedFilterOption;
 
-        // Ensure Type is set (either "Income" or "Expense")
-        if (string.IsNullOrEmpty(newTransaction.Type))
-        {
-            // Log for debugging
-            Console.WriteLine("Transaction Type is empty! Setting default type to Expense.");
-
-            // Default it to "Expense" (can be replaced with logic to set it based on user input)
-            newTransaction.Type = "Expense";
-        }
-
-        // Log the type and amount for debugging
-        Console.WriteLine($"Transaction Type: {newTransaction.Type}, Amount: {newTransaction.Amount}");
-
-        isDatabaseOperationInProgress = true;
-
-        try
-        {
-            newTransaction.UserName = UserName;
-            DbContext.Transactions.Add(newTransaction);
-
-            // Check the type and adjust balance accordingly
-            if (newTransaction.Type == "Income")
-            {
-                // Log to confirm we're hitting this block for Income
-                Console.WriteLine("Processing Income...");
-                Balance += newTransaction.Amount; // Add amount to balance for Income
-            }
-            else if (newTransaction.Type == "Expense")
-            {
-                // Log to confirm we're hitting this block for Expense
-                Console.WriteLine("Processing Expense...");
-                Balance -= newTransaction.Amount; // Subtract amount from balance for Expense
-            }
-
-            // Save to database
-            await DbContext.SaveChangesAsync();
-
-            // Add the transaction to the list to display
-            Transactions.Add(newTransaction);
-
-            // Reset the form for a new transaction
-            newTransaction = new Transaction();
-            IsTransactionFormVisible = false;
-
-            // Log the updated balance
-            Console.WriteLine($"Updated Balance: {Balance}");
-
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error: {ex.Message}");
-        }
-        finally
-        {
-            isDatabaseOperationInProgress = false;
-        }
-
-        StateHasChanged();
-    }
-
-    private void FilterTransactions(ChangeEventArgs e)
-    {
-        var filterOption = e.Value.ToString();
         if (filterOption == "All")
         {
-            FilteredTransactions = new List<Transaction>(Transactions); // No filter, show all
+            FilteredTransactions = new List<Transaction>(Transactions);
         }
         else if (filterOption == "Income")
         {
@@ -316,6 +267,58 @@ else
         else if (Categories.Contains(filterOption))
         {
             FilteredTransactions = Transactions.Where(t => t.Category == filterOption).ToList();
+        }
+
+        // Update pagination based on filtered transactions
+        Pagination.SetPagination(FilteredTransactions);
+        StateHasChanged();
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (isDatabaseOperationInProgress || string.IsNullOrEmpty(newTransaction.Description) || newTransaction.Amount == 0 || newTransaction.Date == default)
+        {
+            return;
+        }
+
+        // Ensure the Type is set correctly
+        if (string.IsNullOrEmpty(newTransaction.Type))
+        {
+            newTransaction.Type = "Income"; // Default to "Income"
+        }
+
+        isDatabaseOperationInProgress = true;
+
+        try
+        {
+            newTransaction.UserName = UserName;
+
+            // Adjust balance based on transaction type
+            if (newTransaction.Type == "Income")
+            {
+                Balance += newTransaction.Amount;
+            }
+            else if (newTransaction.Type == "Expense")
+            {
+                Balance -= newTransaction.Amount;
+            }
+
+            DbContext.Transactions.Add(newTransaction);
+            await DbContext.SaveChangesAsync();
+
+            Transactions.Add(newTransaction);
+            Pagination.SetPagination(Transactions); // Update pagination after adding transaction
+
+            newTransaction = new Transaction(); // Reset transaction form
+            IsTransactionFormVisible = false; // Hide transaction form
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+        finally
+        {
+            isDatabaseOperationInProgress = false;
         }
 
         StateHasChanged();
@@ -358,20 +361,22 @@ else
     {
         if (TransactionToDelete == null) return;
 
-        if (TransactionToDelete.Type == "Income")
-        {
-            Balance -= TransactionToDelete.Amount;
-        }
-        else if (TransactionToDelete.Type == "Expense")
-        {
-            Balance += TransactionToDelete.Amount;
-        }
-
+        // Remove the transaction from the database
         DbContext.Transactions.Remove(TransactionToDelete);
         await DbContext.SaveChangesAsync();
 
-        await LoadUserDataAsync();
+        // Remove the transaction from the list
+        Transactions.Remove(TransactionToDelete);
 
+        // Recalculate the balance after the deletion
+        Balance = Transactions
+            .Where(t => t.UserName == UserName)
+            .Sum(t => t.Type == "Income" ? t.Amount : -t.Amount);
+
+        // Update pagination after deletion
+        Pagination.SetPagination(Transactions);
+
+        // Close the confirmation dialog
         IsDeleteConfirmationVisible = false;
         StateHasChanged();
     }

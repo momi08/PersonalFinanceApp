@@ -23,18 +23,3 @@
 </body>
 
 </html>
-
-<Router AppAssembly="@typeof(App).Assembly">
-    <Found Context="routeData">
-        <!-- When the route is found, show the page with the appropriate layout -->
-        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
-        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
-    </Found>
-    <NotFound>
-        <!-- When no route is found, show this fallback page -->
-        <PageTitle>Not found</PageTitle>
-        <LayoutView Layout="@typeof(MainLayout)">
-            <p role="alert">Sorry, there's nothing at this address.</p>
-        </LayoutView>
-    </NotFound>
-</Router>
