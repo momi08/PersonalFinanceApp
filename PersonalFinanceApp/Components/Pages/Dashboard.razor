@@ -17,7 +17,10 @@
 }
 else
 {
-    <p>Welcome, @UserName!</p>
+    <h5>Welcome, @UserName!</h5>
+
+    <button class="btn btn-primary" @onclick="Logout">Logout</button>
+
     <h4>Your Current Balance: €@Balance</h4>
 
     <div class="balance-controls">
@@ -40,81 +43,25 @@ else
         </div>
     }
 
-    <div class="user-info">
-        <h5>Your Recent Transactions:</h5>
+    <div class="goals-section">
+        <h5>Your Savings Goals</h5>
+        <EditForm Model="@savingsGoal" OnValidSubmit="UpdateSavingsGoal">
+            <DataAnnotationsValidator />
+            <div class="form-group">
+                <label for="goalAmount">Goal Amount (€)</label>
+                <InputNumber id="goalAmount" @bind-Value="savingsGoal.GoalAmount" class="form-control" />
+            </div>
+            <div class="form-group">
+                <label for="currentSavings">Current Savings (€)</label>
+                <InputNumber id="currentSavings" @bind-Value="savingsGoal.CurrentSavings" class="form-control" />
+            </div>
+            <button type="submit" class="btn btn-primary">Update Goal</button>
+        </EditForm>
         <div>
-            <h5>Filter By:</h5>
-            <InputSelect @bind-Value="selectedFilterOption" class="form-control">
-                <option value="All">All</option>
-                <option value="Income">Income</option>
-                <option value="Expense">Expense</option>
-                @foreach (var category in Categories)
-                {
-                    <option value="@category">@category</option>
-                }
-            </InputSelect>
-            <button class="btn btn-primary mt-2" @onclick="ApplyFilter">Apply Filter</button>
+            <p>Progress: @savingsProgress%</p>
+            <progress value="@savingsProgress" max="100"></progress>
         </div>
-
-        @if (FilteredTransactions.Any())
-        {
-            <ul>
-                @foreach (var transaction in FilteredTransactions)
-                {
-                    <li>
-                        @transaction.Description - @transaction.Amount (€@transaction.Type) on @transaction.Date.ToString("yyyy-MM-dd HH:mm:ss")
-                        <button class="btn btn-primary btn-sm" @onclick="() => ShowEditTransactionForm(transaction)">Edit</button>
-                        <button class="btn btn-danger btn-sm" @onclick="() => ShowDeleteConfirmation(transaction)">Delete</button>
-                    </li>
-                }
-            </ul>
-        }
-        else
-        {
-            <p>No transactions found.</p>
-        }
     </div>
-
-    @if (IsTransactionEditFormVisible)
-    {
-        <div class="transaction-form">
-            <h5>Edit Transaction</h5>
-            <EditForm Model="@transactionToEdit" OnValidSubmit="HandleEditTransaction">
-                <DataAnnotationsValidator />
-                <ValidationSummary />
-                <div class="form-group">
-                    <label for="description">Description</label>
-                    <InputText id="description" @bind-Value="transactionToEdit.Description" class="form-control" />
-                </div>
-                <div class="form-group">
-                    <label for="amount">Amount</label>
-                    <InputNumber id="amount" @bind-Value="transactionToEdit.Amount" class="form-control" />
-                </div>
-                <div class="form-group">
-                    <label for="type">Type</label>
-                    <InputSelect id="type" @bind-Value="transactionToEdit.Type" class="form-control">
-                        <option value="Income">Income</option>
-                        <option value="Expense">Expense</option>
-                    </InputSelect>
-                </div>
-                <div class="form-group">
-                    <label for="date">Date</label>
-                    <InputDate id="date" @bind-Value="transactionToEdit.Date" class="form-control" />
-                </div>
-                <button type="submit" class="btn btn-success">Save Changes</button>
-                <button class="btn btn-secondary" @onclick="CancelEditTransaction">Cancel</button>
-            </EditForm>
-        </div>
-    }
-
-    @if (IsDeleteConfirmationVisible)
-    {
-        <div class="delete-confirmation-popup">
-            <h4>Are you sure you want to delete this transaction?</h4>
-            <button class="btn btn-danger" @onclick="DeleteTransaction">Yes, Delete Transaction</button>
-            <button class="btn btn-secondary" @onclick="CancelDelete">Cancel</button>
-        </div>
-    }
 
     <button class="btn btn-primary" @onclick="ShowTransactionForm">Add Transaction</button>
 
@@ -123,9 +70,16 @@ else
         <div class="transaction-form">
             <h5>Add New Transaction</h5>
 
-            @if (!string.IsNullOrEmpty(ErrorMessage))
+            @if (ErrorMessages.Any())
             {
-                <div class="alert alert-danger">@ErrorMessage</div>
+                <div class="alert alert-danger">
+                    <ul>
+                        @foreach (var message in ErrorMessages)
+                        {
+                            <li>@message</li>
+                        }
+                    </ul>
+                </div>
             }
 
             <EditForm Model="@newTransaction" OnValidSubmit="HandleValidSubmit">
@@ -166,7 +120,151 @@ else
         </div>
     }
 
-    <button class="btn btn-primary" @onclick="Logout">Logout</button>
+    <div class="tabs">
+        <button class="btn btn-secondary" @onclick="ShowRecentTransactions">Recent Transactions</button>
+        <button class="btn btn-secondary" @onclick="ShowFilteredTransactions">Filtered Transactions</button>
+    </div>
+
+    @if (isRecentTransactionsVisible)
+    {
+        <div class="recent-transactions">
+            <h5>Recent Transactions</h5>
+            <div class="transaction-list" style="max-height: 200px; overflow-y: scroll;">
+                @foreach (var transaction in Transactions.Take(15))
+                {
+                    <div class="transaction-item d-flex justify-content-between align-items-center mb-2">
+                        <p class="transaction-text">
+                            @transaction.Description - €@transaction.Amount (@transaction.Category) (@transaction.Type) on @transaction.Date.ToString("yyyy-MM-dd")
+                        </p>
+
+                        <div class="transaction-buttons">
+                            <button class="btn btn-primary btn-sm" @onclick="() => ShowEditTransactionForm(transaction)">Edit</button>
+                            <button class="btn btn-danger btn-sm" @onclick="() => ShowDeleteConfirmation(transaction)">Delete</button>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    @if (isFilteredTransactionsVisible)
+    {
+        <div class="filter-section">
+            <h5>Filtered Transactions</h5>
+            <div class="filter-controls">
+                <div class="form-group">
+                    <label for="searchKeyword">Search by Description</label>
+                    <InputText id="searchKeyword" @bind-Value="searchKeyword" class="form-control" />
+                </div>
+                <div class="form-group">
+                    <label for="dateRange">Date Range</label>
+                    <div class="d-flex">
+                        <InputDate @bind-Value="startDate" class="form-control mr-2" />
+                        <InputDate @bind-Value="endDate" class="form-control" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="filterType">Category</label>
+                    <InputSelect @bind-Value="selectedCategory" class="form-control">
+                        <option value="All">All</option>
+                        @foreach (var category in Categories)
+                        {
+                            <option value="@category">@category</option>
+                        }
+                    </InputSelect>
+                </div>
+                <div class="form-group">
+                    <label for="filterType">Type</label>
+                    <InputSelect @bind-Value="selectedType" class="form-control">
+                        <option value="All">All</option>
+                        <option value="Income">Income</option>
+                        <option value="Expense">Expense</option>
+                    </InputSelect>
+                </div>
+                <button class="btn btn-primary mt-2" @onclick="ApplyEnhancedFilter">Apply Filter</button>
+            </div>
+        </div>
+
+        @if (FilteredTransactions.Any())
+        {
+            <ul>
+                @foreach (var transaction in FilteredTransactions)
+                {
+                    <li>
+                        @transaction.Description - €@transaction.Amount (@transaction.Category) (@transaction.Type) on @transaction.Date.ToString("yyyy-MM-dd")
+                        <button class="btn btn-primary btn-sm" @onclick="() => ShowEditTransactionForm(transaction)">Edit</button>
+                        <button class="btn btn-danger btn-sm" @onclick="() => ShowDeleteConfirmation(transaction)">Delete</button>
+                    </li>
+                }
+            </ul>
+        }
+        else
+        {
+            <p>No transactions found.</p>
+        }
+    }
+
+    @if (IsTransactionEditFormVisible)
+    {
+        @if (ErrorMessages.Any())
+        {
+            <div class="alert alert-danger">
+                <ul>
+                    @foreach (var message in ErrorMessages)
+                    {
+                        <li>@message</li>
+                    }
+                </ul>
+            </div>
+        }
+        <div class="transaction-form">
+            <h5>Edit Transaction</h5>
+            <EditForm Model="@transactionToEdit" OnValidSubmit="HandleEditTransaction">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <InputText id="description" @bind-Value="transactionToEdit.Description" class="form-control" />
+                </div>
+                <div class="form-group">
+                    <label for="amount">Amount</label>
+                    <InputNumber id="amount" @bind-Value="transactionToEdit.Amount" class="form-control" />
+                </div>
+                <div class="form-group">
+                    <label for="category">Category</label>
+                    <InputSelect id="category" @bind-Value="transactionToEdit.Category" class="form-control">
+                        <option value="">Select a Category</option>
+                        @foreach (var category in Categories)
+                        {
+                            <option value="@category">@category</option>
+                        }
+                    </InputSelect>
+                </div>
+                <div class="form-group">
+                    <label for="type">Type</label>
+                    <InputSelect id="type" @bind-Value="transactionToEdit.Type" class="form-control">
+                        <option value="Income">Income</option>
+                        <option value="Expense">Expense</option>
+                    </InputSelect>
+                </div>
+                <div class="form-group">
+                    <label for="date">Date</label>
+                    <InputDate id="date" @bind-Value="transactionToEdit.Date" class="form-control" />
+                </div>
+                <button type="submit" class="btn btn-success">Save Changes</button>
+                <button class="btn btn-secondary" @onclick="CancelEditTransaction">Cancel</button>
+            </EditForm>
+        </div>
+    }
+
+    @if (IsDeleteConfirmationVisible)
+    {
+        <div class="delete-confirmation-popup">
+            <h4>Are you sure you want to delete this transaction?</h4>
+            <button class="btn btn-danger" @onclick="DeleteTransaction">Yes, Delete Transaction</button>
+            <button class="btn btn-secondary" @onclick="CancelDelete">Cancel</button>
+        </div>
+    }
 }
 
 @code {
@@ -180,7 +278,15 @@ else
     private bool IsDeleteConfirmationVisible { get; set; } = false;
     private Transaction TransactionToDelete { get; set; }
     private Transaction transactionToEdit = new Transaction();
-    private string ErrorMessage { get; set; }
+    private bool isRecentTransactionsVisible { get; set; } = true;
+    private bool isFilteredTransactionsVisible { get; set; } = false;
+    private List<string> ErrorMessages { get; set; } = new List<string>();
+    private SavingsGoal savingsGoal = new SavingsGoal();
+    private int savingsProgress => savingsGoal.GoalAmount == 0 ? 0 : (int)((savingsGoal.CurrentSavings / savingsGoal.GoalAmount) * 100);
+    private string searchKeyword = "";
+    private DateTime? startDate = null;
+    private DateTime? endDate = null;
+
 
     private List<string> Categories { get; set; } = new List<string>
     {
@@ -189,10 +295,12 @@ else
         "Childcare", "Pets", "Travel"
     };
 
-    private string selectedFilterOption = "All";
+
     private Transaction newTransaction = new Transaction();
     private Transaction manualBalance = new Transaction();
     private bool isDatabaseOperationInProgress = false;
+    private string selectedCategory = "All";
+    private string selectedType = "All";
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -272,6 +380,23 @@ else
         StateHasChanged();
     }
 
+    private async Task UpdateSavingsGoal()
+    {
+        StateHasChanged();
+    }
+
+    private void ShowRecentTransactions()
+    {
+        isRecentTransactionsVisible = true;
+        isFilteredTransactionsVisible = false;
+    }
+
+    private void ShowFilteredTransactions()
+    {
+        isRecentTransactionsVisible = false;
+        isFilteredTransactionsVisible = true;
+    }
+
     private void ShowTransactionForm()
     {
         IsTransactionFormVisible = true;
@@ -295,19 +420,88 @@ else
 
     private async Task HandleEditTransaction()
     {
-        if (transactionToEdit != null)
+        ErrorMessages.Clear();
+
+        if (string.IsNullOrEmpty(transactionToEdit.Description))
+        {
+            ErrorMessages.Add("You must enter the description.");
+        }
+
+        if (string.IsNullOrEmpty(transactionToEdit.Category) || transactionToEdit.Category == "Select a Category")
+        {
+            ErrorMessages.Add("Please select a category for the transaction.");
+        }
+
+        if (transactionToEdit.Type == "Expense" && Balance < transactionToEdit.Amount)
+        {
+            ErrorMessages.Add("Insufficient balance for this expense.");
+        }
+
+        if (ErrorMessages.Any())
+        {
+            StateHasChanged();
+            return;
+        }
+
+        if (string.IsNullOrEmpty(transactionToEdit.Type))
+        {
+            transactionToEdit.Type = "Income";
+        }
+
+        try
         {
             var originalTransaction = Transactions.FirstOrDefault(t => t.Id == transactionToEdit.Id);
 
             if (originalTransaction != null)
             {
-                if (originalTransaction.Type != transactionToEdit.Type)
+                decimal tempBalance = Balance;
+
+                if (originalTransaction.Type == "Income")
                 {
-                    Balance += (transactionToEdit.Type == "Income" ? 1 : -1) * 2 * transactionToEdit.Amount;
+                    tempBalance -= originalTransaction.Amount;
+                }
+                else if (originalTransaction.Type == "Expense")
+                {
+                    tempBalance += originalTransaction.Amount;
+                }
+
+                if (transactionToEdit.Type == "Income")
+                {
+                    tempBalance += transactionToEdit.Amount;
+                }
+                else if (transactionToEdit.Type == "Expense")
+                {
+                    tempBalance -= transactionToEdit.Amount;
+                }
+
+                if (tempBalance < 0)
+                {
+                    ErrorMessages.Add("Updating this transaction will result in a negative balance.");
+                    StateHasChanged();
+                    return;
+                }
+
+                if (originalTransaction.Type == "Income")
+                {
+                    Balance -= originalTransaction.Amount;
+                }
+                else if (originalTransaction.Type == "Expense")
+                {
+                    Balance += originalTransaction.Amount;
+                }
+
+                if (transactionToEdit.Type == "Income")
+                {
+                    Balance += transactionToEdit.Amount;
+                }
+                else if (transactionToEdit.Type == "Expense")
+                {
+                    Balance -= transactionToEdit.Amount;
                 }
 
                 originalTransaction.Description = transactionToEdit.Description;
                 originalTransaction.Amount = transactionToEdit.Amount;
+                originalTransaction.Category = transactionToEdit.Category;
                 originalTransaction.Type = transactionToEdit.Type;
                 originalTransaction.Date = transactionToEdit.Date;
 
@@ -316,10 +510,16 @@ else
 
                 FilteredTransactions = new List<Transaction>(Transactions);
                 IsTransactionEditFormVisible = false;
+
                 StateHasChanged();
             }
         }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+        }
     }
+
 
     private void CancelEditTransaction()
     {
@@ -327,32 +527,43 @@ else
         StateHasChanged();
     }
 
-    private void ApplyFilter()
+    private void ApplyEnhancedFilter()
     {
-        if (selectedFilterOption == "All")
-        {
-            FilteredTransactions = new List<Transaction>(Transactions);
-        }
-        else if (selectedFilterOption == "Income")
-        {
-            FilteredTransactions = Transactions.Where(t => t.Type == "Income").ToList();
-        }
-        else if (selectedFilterOption == "Expense")
-        {
-            FilteredTransactions = Transactions.Where(t => t.Type == "Expense").ToList();
-        }
-        else if (Categories.Contains(selectedFilterOption))
-        {
-            FilteredTransactions = Transactions.Where(t => t.Category == selectedFilterOption).ToList();
-        }
+        FilteredTransactions = Transactions.Where(t =>
+            (string.IsNullOrEmpty(searchKeyword) || t.Description.Contains(searchKeyword, StringComparison.OrdinalIgnoreCase)) &&
+            (!startDate.HasValue || t.Date >= startDate.Value) &&
+            (!endDate.HasValue || t.Date <= endDate.Value) &&
+            (selectedType == "All" || t.Type == selectedType) &&
+            (selectedCategory == "All" || t.Category == selectedCategory)
+        ).ToList();
 
         StateHasChanged();
     }
 
     private async Task HandleValidSubmit()
     {
-        if (isDatabaseOperationInProgress || string.IsNullOrEmpty(newTransaction.Description) || newTransaction.Amount == 0 || newTransaction.Date == default)
+        ErrorMessages.Clear();
+
+        if (string.IsNullOrEmpty(newTransaction.Description))
         {
+            ErrorMessages.Add("You must enter the description.");
+        }
+
+        isDatabaseOperationInProgress = true;
+
+        if (string.IsNullOrEmpty(newTransaction.Category) || newTransaction.Category == "Select a Category")
+        {
+            ErrorMessages.Add("Please select a category for the transaction.");
+        }
+
+        if (newTransaction.Type == "Expense" && Balance < newTransaction.Amount)
+        {
+            ErrorMessages.Add("Insufficient balance for this expense.");
+        }
+
+        if (ErrorMessages.Any())
+        {
+            StateHasChanged();
             return;
         }
 
@@ -360,8 +571,6 @@ else
         {
             newTransaction.Type = "Income";
         }
-
-        isDatabaseOperationInProgress = true;
 
         try
         {
@@ -373,11 +582,6 @@ else
             }
             else if (newTransaction.Type == "Expense")
             {
-                if (Balance < newTransaction.Amount)
-                {
-                    ErrorMessage = "Insufficient balance for this expense.";
-                    return;
-                }
                 Balance -= newTransaction.Amount;
             }
 
