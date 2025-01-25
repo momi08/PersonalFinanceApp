@@ -9,8 +9,5 @@
         public string Category { get; set; }
         public string Type { get; set; }
         public DateTime Date { get; set; }
-
-
-
     }
 }

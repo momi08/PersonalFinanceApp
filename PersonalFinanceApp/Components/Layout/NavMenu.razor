@@ -1,9 +1,11 @@
 ﻿@using Microsoft.EntityFrameworkCore
 @using PersonalFinanceApp.Data
+@using Microsoft.AspNetCore.Components.Authorization;
 @rendermode InteractiveServer
 @inject IJSRuntime JSRuntime
 @inject NavigationManager UriHelper
 @inject AppDbContext DbContext
+@inject AuthenticationStateProvider AuthStateProvider
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
@@ -11,15 +13,21 @@
     </div>
 </div>
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+<button class="navbar-toggler" type="button" aria-label="Toggle navigation" @onclick="ToggleNavMenu">
+    <span class="navbar-toggler-icon"></span>
+</button>
 
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
     <nav class="flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
-            </NavLink>
-        </div>
+        @if (!IsUserLoggedIn)
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                    <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+                </NavLink>
+            </div>
+        }
+
         @if (IsUserLoggedIn)
         {
             <div class="nav-item px-3">
@@ -56,28 +64,27 @@
 
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
 
-    private bool IsUserLoggedIn { get; set; }
+    private bool IsUserLoggedIn { get; set; } = false;
 
     private string userName;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
-        {
-            await CheckUserLoginStatus();
-        }
+        await CheckUserLoginStatus();
     }
 
     private async Task CheckUserLoginStatus()
     {
-        userName = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "userName");
+        userName = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "userName");
         IsUserLoggedIn = !string.IsNullOrEmpty(userName);
+        StateHasChanged();
     }
 
     private async Task Logout()
     {
-        await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "userName");
-        UriHelper.NavigateTo("/login");
+        await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "userName");
+        await ((Authentication)AuthStateProvider).MarkUserAsLoggedOut();
+        UriHelper.NavigateTo("/login", forceLoad: true);
     }
 
     private void ToggleNavMenu()

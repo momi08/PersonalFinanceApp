@@ -6,6 +6,7 @@ namespace PersonalFinanceApp.Data
     {
         public DbSet<User> Users { get; set; }
         public DbSet<Transaction> Transactions { get; set; }
+        public DbSet<SavingsGoal> SavingsGoals { get; set; }
 
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 

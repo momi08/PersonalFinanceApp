@@ -1,15 +1,15 @@
 ﻿@using PersonalFinanceApp.Data
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.JSInterop
+@using Microsoft.AspNetCore.Components.Authorization;
 @inject IJSRuntime JSRuntime
 @inject NavigationManager UriHelper
 @inject AppDbContext DbContext
 @inject IServiceProvider ServiceProvider
+@inject AuthenticationStateProvider AuthStateProvider
 
 @page "/dashboard"
 @rendermode InteractiveServer
-
-<h3>Welcome to Your Dashboard</h3>
 
 @if (string.IsNullOrEmpty(UserName))
 {
@@ -18,8 +18,6 @@
 else
 {
     <h5>Welcome, @UserName!</h5>
-
-    <button class="btn btn-primary" @onclick="Logout">Logout</button>
 
     <h4>Your Current Balance: €@Balance</h4>
 
@@ -309,7 +307,7 @@ else
             isDatabaseOperationInProgress = true;
             try
             {
-                UserName = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "userName");
+                UserName = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "userName");
 
                 if (string.IsNullOrEmpty(UserName))
                 {
@@ -318,6 +316,7 @@ else
                 else
                 {
                     await LoadUserDataAsync();
+                    await LoadSavingsGoal();
                 }
             }
             catch (Exception ex)
@@ -327,9 +326,23 @@ else
             finally
             {
                 isDatabaseOperationInProgress = false;
+                StateHasChanged();
             }
+        }
+    }
 
-            StateHasChanged();
+    private async Task LoadSavingsGoal()
+    {
+        var existingGoal = await DbContext.SavingsGoals
+            .FirstOrDefaultAsync(s => s.UserName == UserName);
+
+        if (existingGoal != null)
+        {
+            savingsGoal = existingGoal;
+        }
+        else
+        {
+            savingsGoal = new SavingsGoal();
         }
     }
 
@@ -382,6 +395,28 @@ else
 
     private async Task UpdateSavingsGoal()
     {
+        if (savingsGoal.GoalAmount <= 0 || string.IsNullOrEmpty(UserName))
+        {
+            ErrorMessages.Add("Please enter a valid savings goal amount.");
+            StateHasChanged();
+            return;
+        }
+        var existingGoal = await DbContext.SavingsGoals
+            .FirstOrDefaultAsync(s => s.UserName == UserName);
+
+        if (existingGoal != null)
+        {
+            existingGoal.GoalAmount = savingsGoal.GoalAmount;
+            existingGoal.CurrentSavings = savingsGoal.CurrentSavings;
+
+            DbContext.SavingsGoals.Update(existingGoal);
+        }
+        else
+        {
+            savingsGoal.UserName = UserName;
+            DbContext.SavingsGoals.Add(savingsGoal);
+        }
+        await DbContext.SaveChangesAsync();
         StateHasChanged();
     }
 
@@ -636,13 +671,6 @@ else
         {
             Console.WriteLine($"Error resetting balance: {ex.Message}");
         }
-    }
-
-
-    private async Task Logout()
-    {
-        await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "userName");
-        UriHelper.NavigateTo("/login", forceLoad: true);
     }
 
     private void ShowDeleteConfirmation(Transaction transaction)

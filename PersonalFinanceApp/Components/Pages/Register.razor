@@ -1,10 +1,13 @@
 ﻿@using Microsoft.EntityFrameworkCore
 @using PersonalFinanceApp.Data
+@using Microsoft.AspNetCore.Components.Authorization
 @rendermode InteractiveServer
 
 @page "/register"
 @inject NavigationManager UriHelper
 @inject AppDbContext DbContext
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IJSRuntime JSRuntime
 
 <h3>Register</h3>
 
@@ -24,15 +27,47 @@
     <p style="color: red;">@PasswordError</p>
 }
 
+@if (!string.IsNullOrEmpty(GeneralError))
+{
+    <p style="color: red;">@GeneralError</p>
+}
+
 @code {
     private string UserName { get; set; }
     private string Password { get; set; }
     private string ConfirmPassword { get; set; }
     private string PasswordError { get; set; }
+    private string GeneralError { get; set; }
 
     private async Task RegisterUser()
     {
         PasswordError = string.Empty;
+        GeneralError = string.Empty;
+
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (authState.User.Identity?.IsAuthenticated == true)
+        {
+            GeneralError = "Please log out before registering a new account.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(UserName) || string.IsNullOrWhiteSpace(Password) || string.IsNullOrWhiteSpace(ConfirmPassword))
+        {
+            GeneralError = "All fields are required.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(UserName) || UserName.Length < 4)
+        {
+            PasswordError = "Username must be at least 4 characters long.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(Password) || Password.Length < 8)
+        {
+            PasswordError = "Password must be at least 8 characters long.";
+            return;
+        }
 
         if (Password != ConfirmPassword)
         {
@@ -45,9 +80,10 @@
 
         if (existingUser != null)
         {
-            PasswordError = "User already exists.";
+            GeneralError = "User already exists.";
             return;
         }
+
         var newUser = new User
             {
                 UserName = UserName,
@@ -56,6 +92,8 @@
 
         DbContext.Users.Add(newUser);
         await DbContext.SaveChangesAsync();
-        UriHelper.NavigateTo("/login");
+        await ((Authentication)AuthStateProvider).MarkUserAsAuthenticated(UserName);
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "userName", UserName);
+        UriHelper.NavigateTo("/dashboard", forceLoad: true);
     }
 }

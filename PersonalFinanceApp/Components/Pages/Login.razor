@@ -1,10 +1,11 @@
 ﻿@using Microsoft.EntityFrameworkCore
 @using PersonalFinanceApp.Data
+@using Microsoft.AspNetCore.Components.Authorization;
 @rendermode InteractiveServer
 @inject NavigationManager UriHelper
 @inject AppDbContext DbContext
 @inject IJSRuntime JSRuntime
- 
+
 @page "/login"
 
 
@@ -27,6 +28,7 @@
     private string UserName { get; set; }
     private string Password { get; set; }
     private string ErrorMessage { get; set; }
+    private bool IsUserLoggedIn { get; set; }
 
     private async Task LoginUser()
     {
@@ -44,9 +46,7 @@
             ErrorMessage = "Invalid username or password.";
             return;
         }
-
-        await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "userName", UserName);
-
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "userName", UserName);
         UriHelper.NavigateTo("/dashboard");
     }
 }
