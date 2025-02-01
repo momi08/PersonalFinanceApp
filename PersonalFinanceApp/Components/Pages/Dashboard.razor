@@ -20,192 +20,9 @@
 }
 else
 {
-    <h5>Welcome, @UserName!</h5>
-
-    <h4>Your Current Balance: €@Balance</h4>
-
-    <div class="balance-controls">
-        <button class="btn btn-warning" @onclick="ToggleManualBalanceForm">Add to Balance</button>
-        <button class="btn btn-danger" @onclick="ResetBalance">Reset Balance</button>
-    </div>
-
+    <h2>Welcome, @UserName!</h2>
+    <h2>Your Current Balance: €@Balance</h2>
     @if (IsManualBalanceVisible)
-    {
-        <div class="manual-balance-form">
-            <EditForm Model="@manualBalance" OnValidSubmit="HandleManualBalanceSubmit">
-                <DataAnnotationsValidator />
-                <ValidationSummary />
-                <div class="form-group">
-                    <label for="balanceAmount">Amount</label>
-                    <InputNumber id="balanceAmount" @bind-Value="manualBalance.Amount" class="form-control" />
-                </div>
-                <button type="submit" class="btn btn-success">Add Balance</button>
-            </EditForm>
-        </div>
-    }
-
-    <div class="goals-section">
-        <h5>Your Savings Goals</h5>
-        <EditForm Model="@savingsGoal" OnValidSubmit="UpdateSavingsGoal">
-            <DataAnnotationsValidator />
-            <div class="form-group">
-                <label for="goalAmount">Goal Amount (€)</label>
-                <InputNumber id="goalAmount" @bind-Value="savingsGoal.GoalAmount" class="form-control" />
-            </div>
-            <div class="form-group">
-                <label for="currentSavings">Current Savings (€)</label>
-                <InputNumber id="currentSavings" @bind-Value="savingsGoal.CurrentSavings" class="form-control" />
-            </div>
-            <button type="submit" class="btn btn-primary">Update Goal</button>
-        </EditForm>
-        <div>
-            <p>Progress: @savingsProgress%</p>
-            <progress value="@savingsProgress" max="100"></progress>
-        </div>
-    </div>
-
-    <button class="btn btn-primary" @onclick="ShowTransactionForm">Add Transaction</button>
-
-    @if (IsTransactionFormVisible)
-    {
-        <div class="transaction-form">
-            <h5>Add New Transaction</h5>
-
-            @if (ErrorMessages.Any())
-            {
-                <div class="alert alert-danger">
-                    <ul>
-                        @foreach (var message in ErrorMessages)
-                        {
-                            <li>@message</li>
-                        }
-                    </ul>
-                </div>
-            }
-
-            <EditForm Model="@newTransaction" OnValidSubmit="HandleValidSubmit">
-                <DataAnnotationsValidator />
-                <ValidationSummary />
-                <div class="form-group">
-                    <label for="description">Description</label>
-                    <InputText id="description" @bind-Value="newTransaction.Description" class="form-control" />
-                </div>
-                <div class="form-group">
-                    <label for="amount">Amount</label>
-                    <InputNumber id="amount" @bind-Value="newTransaction.Amount" class="form-control" />
-                </div>
-                <div class="form-group">
-                    <label for="category">Category</label>
-                    <InputSelect id="category" @bind-Value="newTransaction.Category" class="form-control">
-                        <option value="">Select a Category</option>
-                        @foreach (var category in Categories)
-                        {
-                            <option value="@category">@category</option>
-                        }
-                    </InputSelect>
-                </div>
-                <div class="form-group">
-                    <label for="type">Type</label>
-                    <InputSelect id="type" @bind-Value="newTransaction.Type" class="form-control">
-                        <option value="Income">Income</option>
-                        <option value="Expense">Expense</option>
-                    </InputSelect>
-                </div>
-                <div class="form-group">
-                    <label for="date">Date</label>
-                    <InputDate id="date" @bind-Value="newTransaction.Date" class="form-control" />
-                </div>
-
-                <button type="submit" class="btn btn-success">Save Transaction</button>
-            </EditForm>
-        </div>
-    }
-
-    <div class="tabs">
-        <button class="btn btn-secondary" @onclick="ShowRecentTransactions">Recent Transactions</button>
-        <button class="btn btn-secondary" @onclick="ShowFilteredTransactions">Filtered Transactions</button>
-    </div>
-
-    @if (isRecentTransactionsVisible)
-    {
-        <div class="recent-transactions">
-            <h5>Recent Transactions</h5>
-            <div class="transaction-list" style="max-height: 200px; overflow-y: scroll;">
-                @foreach (var transaction in Transactions.Take(15))
-                {
-                    <div class="transaction-item d-flex justify-content-between align-items-center mb-2">
-                        <p class="transaction-text">
-                            @transaction.Description - €@transaction.Amount (@transaction.Category) (@transaction.Type) on @transaction.Date.ToString("yyyy-MM-dd")
-                        </p>
-
-                        <div class="transaction-buttons">
-                            <button class="btn btn-primary btn-sm" @onclick="() => ShowEditTransactionForm(transaction)">Edit</button>
-                            <button class="btn btn-danger btn-sm" @onclick="() => ShowDeleteConfirmation(transaction)">Delete</button>
-                        </div>
-                    </div>
-                }
-            </div>
-        </div>
-    }
-
-    @if (isFilteredTransactionsVisible)
-    {
-        <div class="filter-section">
-            <h5>Filtered Transactions</h5>
-            <div class="filter-controls">
-                <div class="form-group">
-                    <label for="searchKeyword">Search by Description</label>
-                    <InputText id="searchKeyword" @bind-Value="searchKeyword" class="form-control" />
-                </div>
-                <div class="form-group">
-                    <label for="dateRange">Date Range</label>
-                    <div class="d-flex">
-                        <InputDate @bind-Value="startDate" class="form-control mr-2" />
-                        <InputDate @bind-Value="endDate" class="form-control" />
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="filterType">Category</label>
-                    <InputSelect @bind-Value="selectedCategory" class="form-control">
-                        <option value="All">All</option>
-                        @foreach (var category in Categories)
-                        {
-                            <option value="@category">@category</option>
-                        }
-                    </InputSelect>
-                </div>
-                <div class="form-group">
-                    <label for="filterType">Type</label>
-                    <InputSelect @bind-Value="selectedType" class="form-control">
-                        <option value="All">All</option>
-                        <option value="Income">Income</option>
-                        <option value="Expense">Expense</option>
-                    </InputSelect>
-                </div>
-                <button class="btn btn-primary mt-2" @onclick="ApplyEnhancedFilter">Apply Filter</button>
-            </div>
-        </div>
-
-        @if (FilteredTransactions.Any())
-        {
-            <ul>
-                @foreach (var transaction in FilteredTransactions)
-                {
-                    <li>
-                        @transaction.Description - €@transaction.Amount (@transaction.Category) (@transaction.Type) on @transaction.Date.ToString("yyyy-MM-dd")
-                        <button class="btn btn-primary btn-sm" @onclick="() => ShowEditTransactionForm(transaction)">Edit</button>
-                        <button class="btn btn-danger btn-sm" @onclick="() => ShowDeleteConfirmation(transaction)">Delete</button>
-                    </li>
-                }
-            </ul>
-        }
-        else
-        {
-            <p>No transactions found.</p>
-        }
-    }
-
-    @if (IsTransactionEditFormVisible)
     {
         @if (ErrorMessages.Any())
         {
@@ -218,56 +35,345 @@ else
                 </ul>
             </div>
         }
-        <div class="transaction-form">
-            <h5>Edit Transaction</h5>
-            <EditForm Model="@transactionToEdit" OnValidSubmit="HandleEditTransaction">
+
+        <div class="manual-balance-form">
+            <EditForm Model="@manualBalance" OnValidSubmit="HandleManualBalanceSubmit">
                 <DataAnnotationsValidator />
                 <ValidationSummary />
                 <div class="form-group">
-                    <label for="description">Description</label>
-                    <InputText id="description" @bind-Value="transactionToEdit.Description" class="form-control" />
+                    <label for="balanceAmount">Amount</label>
+                    <InputNumber id="balanceAmount" @bind-Value="manualBalance.Amount" class="input" />
                 </div>
-                <div class="form-group">
-                    <label for="amount">Amount</label>
-                    <InputNumber id="amount" @bind-Value="transactionToEdit.Amount" class="form-control" />
-                </div>
-                <div class="form-group">
-                    <label for="category">Category</label>
-                    <InputSelect id="category" @bind-Value="transactionToEdit.Category" class="form-control">
-                        <option value="">Select a Category</option>
-                        @foreach (var category in Categories)
-                        {
-                            <option value="@category">@category</option>
-                        }
-                    </InputSelect>
-                </div>
-                <div class="form-group">
-                    <label for="type">Type</label>
-                    <InputSelect id="type" @bind-Value="transactionToEdit.Type" class="form-control">
-                        <option value="Income">Income</option>
-                        <option value="Expense">Expense</option>
-                    </InputSelect>
-                </div>
-                <div class="form-group">
-                    <label for="date">Date</label>
-                    <InputDate id="date" @bind-Value="transactionToEdit.Date" class="form-control" />
-                </div>
-                <button type="submit" class="btn btn-success">Save Changes</button>
-                <button class="btn btn-secondary" @onclick="CancelEditTransaction">Cancel</button>
+                <button type="submit" class="btn">Add Balance</button>
             </EditForm>
         </div>
     }
+    <div class="balance-controls">
+        <button class="btn" @onclick="ToggleManualBalanceForm">Add to Balance</button>
+        <button class="btn" @onclick="ResetBalance">Reset Balance</button>
+    </div>
 
-    @if (IsDeleteConfirmationVisible)
-    {
-        <div class="delete-confirmation-popup">
-            <h4>Are you sure you want to delete this transaction?</h4>
-            <button class="btn btn-danger" @onclick="DeleteTransaction">Yes, Delete Transaction</button>
-            <button class="btn btn-secondary" @onclick="CancelDelete">Cancel</button>
+    <div class="tab-content" style="margin-top: 30px;">
+        <div class="tabs">
+            <a class="tab @(currentTab == 1 ? "active" : "")" @onclick="() => SetCurrentTab(1)">
+                Transactions
+            </a>
+            <a class="tab @(currentTab == 2 ? "active" : "")" @onclick="() => SetCurrentTab(2)">
+                Saving Goals
+            </a>
+            <a class="tab @(currentTab == 3 ? "active" : "")" @onclick="() => SetCurrentTab(3)">
+                Filtered Transactions
+            </a>
         </div>
-    }
-}
+        @if (currentTab == 1)
+        {
+            <div class="tab-pane active">
+                <h3>Your Transactions</h3>
+                <button class="btn" @onclick="ShowTransactionForm">Add Transaction</button>
 
+                @if (IsTransactionFormVisible)
+                {
+                    <div class="transaction-form">
+                        <h3>Add New Transaction</h3>
+                        @if (ErrorMessages.Any())
+                        {
+                            <div class="alert alert-danger">
+                                <ul>
+                                    @foreach (var message in ErrorMessages)
+                                    {
+                                        <li>@message</li>
+                                    }
+                                </ul>
+                            </div>
+                        }
+
+                        <EditForm Model="@newTransaction" OnValidSubmit="HandleValidSubmit">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary />
+
+                            <div class="form-group">
+                                <label for="description">Description</label>
+                                <InputText id="description" @bind-Value="newTransaction.Description" class="input" />
+                            </div>
+
+                            <div class="form-group">
+                                <label for="amount">Amount</label>
+                                <InputNumber id="amount" @bind-Value="newTransaction.Amount" class="input" />
+                            </div>
+
+                            <div class="form-group">
+                                <label for="category">Category</label>
+                                <InputSelect id="category" @bind-Value="newTransaction.Category" class="input">
+                                    <option value="">Select a Category</option>
+                                    @foreach (var category in Categories)
+                                    {
+                                        <option value="@category">@category</option>
+                                    }
+                                </InputSelect>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="type">Type</label>
+                                <InputSelect id="type" @bind-Value="newTransaction.Type" class="input">
+                                    <option value="Income">Income</option>
+                                    <option value="Expense">Expense</option>
+                                </InputSelect>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="date">Date</label>
+                                <InputDate id="date" @bind-Value="newTransaction.Date" class="input" />
+                            </div>
+
+                            <button type="submit" class="btn">Save Transaction</button>
+                        </EditForm>
+                    </div>
+                }
+
+                @if (isRecentTransactionsVisible)
+                {
+                    <div class="transaction-list">
+                        <h3>Recent Transactions</h3>
+                        @foreach (var transaction in Transactions.Take(15))
+                        {
+                            <div class="transaction-item">
+                                <p class="transaction-text">
+                                    @transaction.Description - €@transaction.Amount (@transaction.Category) (@transaction.Type) on @transaction.Date.ToString("yyyy-MM-dd HH:mm:ss")
+                                </p>
+                                <div class="transaction-buttons">
+                                    @if (!transaction.IsManuallyAdded)
+                                    {
+                                        <button class="btn" @onclick="() => ShowEditTransactionForm(transaction)">
+                                            Edit
+                                        </button>
+                                    }
+                                    <button class="btn delete-btn" @onclick="() => ShowDeleteConfirmation(transaction)">Delete</button>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                @if (IsTransactionEditFormVisible)
+                {
+                    @if (ErrorMessages.Any())
+                    {
+                        <div class="alert alert-danger">
+                            <ul>
+                                @foreach (var message in ErrorMessages)
+                                {
+                                    <li>@message</li>
+                                }
+                            </ul>
+                        </div>
+                    }
+                    <div class="transaction-form">
+                        <h5>Edit Transaction</h5>
+                        <EditForm Model="@transactionToEdit" OnValidSubmit="HandleEditTransaction">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary />
+                            <div class="form-group">
+                                <label for="description">Description</label>
+                                <InputText id="description" @bind-Value="transactionToEdit.Description" class="form-control" />
+                            </div>
+                            <div class="form-group">
+                                <label for="amount">Amount</label>
+                                <InputNumber id="amount" @bind-Value="transactionToEdit.Amount" class="form-control" />
+                            </div>
+                            <div class="form-group">
+                                <label for="category">Category</label>
+                                <InputSelect id="category" @bind-Value="transactionToEdit.Category" class="form-control">
+                                    <option value="">Select a Category</option>
+                                    @foreach (var category in Categories)
+                                    {
+                                        <option value="@category">@category</option>
+                                    }
+                                </InputSelect>
+                            </div>
+                            <div class="form-group">
+                                <label for="type">Type</label>
+                                <InputSelect id="type" @bind-Value="transactionToEdit.Type" class="form-control">
+                                    <option value="Income">Income</option>
+                                    <option value="Expense">Expense</option>
+                                </InputSelect>
+                            </div>
+                            <div class="form-group">
+                                <label for="date">Date</label>
+                                <InputDate id="date" @bind-Value="transactionToEdit.Date" class="form-control" />
+                            </div>
+                            <button type="submit" class="btn btn-success">Save Changes</button>
+                            <button class="btn btn-secondary" @onclick="CancelEditTransaction">Cancel</button>
+                        </EditForm>
+                    </div>
+                }
+
+                @if (IsDeleteConfirmationVisible)
+                {
+                    <div class="delete-confirmation-popup">
+                        <h4>Are you sure you want to delete this transaction?</h4>
+                        <button class="btn btn-danger" @onclick="DeleteTransaction">Yes, Delete Transaction</button>
+                        <button class="btn btn-secondary" @onclick="CancelDelete">Cancel</button>
+                    </div>
+                }
+            </div>
+        }
+
+        @if (currentTab == 2)
+        {
+            <div class="tab-pane active">
+                <h3>Your Savings Goals</h3>
+                <EditForm Model="@savingsGoal" OnValidSubmit="UpdateSavingsGoal">
+                    <DataAnnotationsValidator />
+
+                    <div class="form-group">
+                        <label for="goalAmount">Goal Amount (€)</label>
+                        <InputNumber id="goalAmount" @bind-Value="savingsGoal.GoalAmount" class="input" />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="currentSavings">Current Savings (€)</label>
+                        <InputNumber id="currentSavings" @bind-Value="savingsGoal.CurrentSavings" class="input" />
+                    </div>
+
+                    <button type="submit" class="btn">Update Goal</button>
+                </EditForm>
+
+                <div>
+                    <p>Progress: @savingsProgress%</p>
+                    <progress value="@savingsProgress" max="100"></progress>
+                </div>
+            </div>
+        }
+
+        @if (currentTab == 3)
+        {
+            <div class="tab-pane active">
+                <h3>Filtered Transactions</h3>
+                <div class="filter-controls">
+                    <div class="form-group">
+                        <label for="searchKeyword">Search by Description</label>
+                        <InputText id="searchKeyword" @bind-Value="searchKeyword" class="input" />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="dateRange">Date Range</label>
+                        <div class="date-range">
+                            <InputDate @bind-Value="startDate" class="input" />
+                            <InputDate @bind-Value="endDate" class="input" />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="filterType">Category</label>
+                        <InputSelect @bind-Value="selectedCategory" class="input">
+                            <option value="All">All</option>
+                            @foreach (var category in Categories)
+                            {
+                                <option value="@category">@category</option>
+                            }
+                        </InputSelect>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="filterType">Type</label>
+                        <InputSelect @bind-Value="selectedType" class="input">
+                            <option value="All">All</option>
+                            <option value="Income">Income</option>
+                            <option value="Expense">Expense</option>
+                        </InputSelect>
+                    </div>
+
+                    <button class="btn" @onclick="ApplyEnhancedFilter">Apply Filter</button>
+                </div>
+
+                @if (FilteredTransactions.Any())
+                {
+                    <ul class="transaction-list">
+                        @foreach (var transaction in FilteredTransactions)
+                        {
+                            <li class="transaction-item">
+                                @transaction.Description - €@transaction.Amount (@transaction.Category) (@transaction.Type) on @transaction.Date.ToString("yyyy-MM-dd HH:mm:ss")
+                                <div class="transaction-buttons">
+                                    @if (!transaction.IsManuallyAdded)
+                                    {
+                                        <button class="btn" @onclick="() => ShowEditTransactionForm(transaction)">
+                                            Edit
+                                        </button>
+                                    }
+                                    <button class="btn delete-btn" @onclick="() => ShowDeleteConfirmation(transaction)">Delete</button>
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <p>No transactions found.</p>
+                }
+                @if (IsTransactionEditFormVisible)
+                {
+                    @if (ErrorMessages.Any())
+                    {
+                        <div class="alert alert-danger">
+                            <ul>
+                                @foreach (var message in ErrorMessages)
+                                {
+                                    <li>@message</li>
+                                }
+                            </ul>
+                        </div>
+                    }
+                    <div class="transaction-form">
+                        <h5>Edit Transaction</h5>
+                        <EditForm Model="@transactionToEdit" OnValidSubmit="HandleEditTransaction">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary />
+                            <div class="form-group">
+                                <label for="description">Description</label>
+                                <InputText id="description" @bind-Value="transactionToEdit.Description" class="form-control" />
+                            </div>
+                            <div class="form-group">
+                                <label for="amount">Amount</label>
+                                <InputNumber id="amount" @bind-Value="transactionToEdit.Amount" class="form-control" />
+                            </div>
+                            <div class="form-group">
+                                <label for="category">Category</label>
+                                <InputSelect id="category" @bind-Value="transactionToEdit.Category" class="form-control">
+                                    <option value="">Select a Category</option>
+                                    @foreach (var category in Categories)
+                                    {
+                                        <option value="@category">@category</option>
+                                    }
+                                </InputSelect>
+                            </div>
+                            <div class="form-group">
+                                <label for="type">Type</label>
+                                <InputSelect id="type" @bind-Value="transactionToEdit.Type" class="form-control">
+                                    <option value="Income">Income</option>
+                                    <option value="Expense">Expense</option>
+                                </InputSelect>
+                            </div>
+                            <div class="form-group">
+                                <label for="date">Date</label>
+                                <InputDate id="date" @bind-Value="transactionToEdit.Date" class="form-control" />
+                            </div>
+                            <button type="submit" class="btn btn-success">Save Changes</button>
+                            <button class="btn btn-secondary" @onclick="CancelEditTransaction">Cancel</button>
+                        </EditForm>
+                    </div>
+                }
+
+                @if (IsDeleteConfirmationVisible)
+                {
+                    <div class="delete-confirmation-popup">
+                        <h4>Are you sure you want to delete this transaction?</h4>
+                        <button class="btn btn-danger" @onclick="DeleteTransaction">Yes, Delete Transaction</button>
+                        <button class="btn btn-secondary" @onclick="CancelDelete">Cancel</button>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}
 @code {
     private string UserName { get; set; }
     private decimal Balance { get; set; }
@@ -298,6 +404,12 @@ else
     private bool isDatabaseOperationInProgress = false;
     private string selectedCategory = "All";
     private string selectedType = "All";
+    private int currentTab = 1; 
+
+    private void SetCurrentTab(int tabNumber)
+    {
+        currentTab = tabNumber;
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -351,21 +463,21 @@ else
 
     private async Task HandleManualBalanceSubmit()
     {
-        Balance = await TransactionService.HandleManualBalanceSubmitAsync(UserName, manualBalance.Amount, Transactions);
-        var manualTransaction = new Transaction
-            {
-                UserName = UserName,
-                Amount = manualBalance.Amount,
-                Category = "Manual Balance",
-                Type = "Income",
-                Date = DateTime.Now,
-                Description = "Manual Balance Addition"
-            };
+        ErrorMessages.Clear();
+        var (success, newBalance, errorMessages, updatedTransactions) = await TransactionService.HandleManualBalanceSubmitAsync(UserName, manualBalance.Amount, Transactions);
 
-        Transactions.Add(manualTransaction);
+        if (!success)
+        {
+            ErrorMessages.AddRange(errorMessages);
+            StateHasChanged();
+            return;
+        }
+        Balance = newBalance;
+        Transactions = updatedTransactions;
         FilteredTransactions = new List<Transaction>(Transactions);
         manualBalance = new Transaction();
         IsManualBalanceVisible = false;
+        SortTransactions();
         StateHasChanged();
     }
 
@@ -389,14 +501,23 @@ else
         isFilteredTransactionsVisible = false;
     }
 
+    private void SortTransactions()
+    {
+        Transactions = Transactions.OrderByDescending(t => t.Date).ToList();
+        FilteredTransactions = new List<Transaction>(Transactions);
+        StateHasChanged();
+    }
+
     private void ShowFilteredTransactions()
     {
+        SortTransactions();
         isRecentTransactionsVisible = false;
         isFilteredTransactionsVisible = true;
     }
 
     private void ShowTransactionForm()
     {
+        ErrorMessages.Clear();
         IsTransactionFormVisible = true;
         newTransaction.Date = DateTime.Now;
     }
@@ -415,6 +536,7 @@ else
                 Date = transaction.Date
             };
         IsTransactionEditFormVisible = true;
+        StateHasChanged();
     }
 
     private async Task HandleEditTransaction()
@@ -448,6 +570,14 @@ else
 
     private void ApplyEnhancedFilter()
     {
+        if (startDate.HasValue && endDate.HasValue && endDate.Value < startDate.Value)
+        {
+            endDate = startDate;
+        }
+        if (endDate.HasValue)
+        {
+            endDate = endDate.Value.Date.AddDays(1).AddMilliseconds(-1);
+        }
         FilteredTransactions = Transactions.Where(t =>
             (string.IsNullOrEmpty(searchKeyword) || t.Description.Contains(searchKeyword, StringComparison.OrdinalIgnoreCase)) &&
             (!startDate.HasValue || t.Date >= startDate.Value) &&
@@ -461,6 +591,7 @@ else
 
     private async Task HandleValidSubmit()
     {
+        ErrorMessages.Clear();
         var (isSuccess, errorMessages, updatedFilteredTransactions) = await TransactionService.HandleValidSubmitAsync(UserName, Balance, newTransaction, Transactions);
 
         if (!isSuccess)
@@ -469,10 +600,12 @@ else
         }
         else
         {
+            newTransaction = new Transaction();
             FilteredTransactions = updatedFilteredTransactions;
             Balance = updatedFilteredTransactions.Sum(t => t.Type == "Income" ? t.Amount : -t.Amount);
             IsTransactionFormVisible = false;
         }
+        SortTransactions();
         StateHasChanged();
     }
 
@@ -494,6 +627,7 @@ else
     {
         TransactionToDelete = transaction;
         IsDeleteConfirmationVisible = true;
+        StateHasChanged();
     }
 
     private async Task DeleteTransaction()

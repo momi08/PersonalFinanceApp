@@ -9,28 +9,24 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IJSRuntime JSRuntime
 
-<h3>Register</h3>
+<h3 class="register-title">Register</h3>
 
-<div>
-    <input class="m-3" placeholder="Enter username" @bind="UserName" />
-</div>
-<div>
-    <input type="password" class="m-3" placeholder="Enter password" @bind="Password" />
-</div>
-<div>
-    <input type="password" class="m-3" placeholder="Confirm password" @bind="ConfirmPassword" />
-</div>
-<button class="btn btn-primary m-3" @onclick="RegisterUser">Register</button>
+<div class="register-form">
+    <input class="input-field" type="text" placeholder="Enter username" @bind="UserName" />
+    <input class="input-field" type="password" placeholder="Enter password" @bind="Password" />
+    <input class="input-field" type="password" placeholder="Confirm password" @bind="ConfirmPassword" />
+    <button class="btn register-btn" @onclick="RegisterUser">Register</button>
 
-@if (!string.IsNullOrEmpty(PasswordError))
-{
-    <p style="color: red;">@PasswordError</p>
-}
+    @if (!string.IsNullOrEmpty(PasswordError))
+    {
+        <p class="error-text">@PasswordError</p>
+    }
 
-@if (!string.IsNullOrEmpty(GeneralError))
-{
-    <p style="color: red;">@GeneralError</p>
-}
+    @if (!string.IsNullOrEmpty(GeneralError))
+    {
+        <p class="error-text">@GeneralError</p>
+    }
+</div>
 
 @code {
     private string UserName { get; set; }

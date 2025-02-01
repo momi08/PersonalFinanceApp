@@ -2,18 +2,18 @@
 
 <PageTitle>PersonalFinanceApp</PageTitle>
 
-<div class="page">
-    <div class="sidebar">
+<div class="layout">
+    <aside class="sidebar">
         <NavMenu />
-    </div>
+    </aside>
 
-    <main>
-        <div class="top-row px-4">
-            <a href="https://docs.microsoft.com/aspnet/" target="_blank">About</a>
-        </div>
+    <div class="main-content">
+        <header class="top-bar">
+            <a href="https://docs.microsoft.com/aspnet/" target="_blank" class="about-link">About</a>
+        </header>
 
-        <article class="content px-4">
+        <section class="content">
             @Body
-        </article>
-    </main>
+        </section>
+    </div>
 </div>
