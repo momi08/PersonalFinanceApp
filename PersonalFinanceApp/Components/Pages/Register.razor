@@ -84,11 +84,10 @@
             return;
         }
 
-        var passwordHasher = new Microsoft.AspNetCore.Identity.PasswordHasher<User>();
         var newUser = new User
             {
                 UserName = UserName,
-                PasswordHash = passwordHasher.HashPassword(null, Password)
+                Password = Password
             };
 
         DbContext.Users.Add(newUser);
