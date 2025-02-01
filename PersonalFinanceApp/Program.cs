@@ -13,6 +13,9 @@ namespace PersonalFinanceApp
             builder.Services.AddRazorPages();
             builder.Services.AddServerSideBlazor();
             builder.Services.AddScoped<AuthenticationStateProvider, Authentication>();
+            builder.Services.AddScoped<SavingsGoalService>();
+            builder.Services.AddScoped<UserService>();
+            builder.Services.AddScoped<TransactionService>();
 
             builder.Services.AddDbContext<AppDbContext>(options =>
             options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")

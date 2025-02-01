@@ -7,6 +7,9 @@
 @inject AppDbContext DbContext
 @inject IServiceProvider ServiceProvider
 @inject AuthenticationStateProvider AuthStateProvider
+@inject SavingsGoalService SavingsGoalService
+@inject UserService UserService
+@inject TransactionService TransactionService
 
 @page "/dashboard"
 @rendermode InteractiveServer
@@ -279,21 +282,17 @@ else
     private bool isRecentTransactionsVisible { get; set; } = true;
     private bool isFilteredTransactionsVisible { get; set; } = false;
     private List<string> ErrorMessages { get; set; } = new List<string>();
-    private SavingsGoal savingsGoal = new SavingsGoal();
+    private SavingsGoal savingsGoal;
     private int savingsProgress => savingsGoal.GoalAmount == 0 ? 0 : (int)((savingsGoal.CurrentSavings / savingsGoal.GoalAmount) * 100);
     private string searchKeyword = "";
     private DateTime? startDate = null;
     private DateTime? endDate = null;
-
-
     private List<string> Categories { get; set; } = new List<string>
     {
-        "Housing", "Food", "Transportation", "Health & Medical", "Insurance", "Entertainment",
+        "Housing", "Salary", "Food", "Transportation", "Health & Medical", "Insurance", "Entertainment",
         "Clothing", "Personal Care", "Education", "Debt Repayment", "Savings & Investments",
         "Childcare", "Pets", "Travel"
     };
-
-
     private Transaction newTransaction = new Transaction();
     private Transaction manualBalance = new Transaction();
     private bool isDatabaseOperationInProgress = false;
@@ -333,31 +332,16 @@ else
 
     private async Task LoadSavingsGoal()
     {
-        var existingGoal = await DbContext.SavingsGoals
-            .FirstOrDefaultAsync(s => s.UserName == UserName);
-
-        if (existingGoal != null)
-        {
-            savingsGoal = existingGoal;
-        }
-        else
-        {
-            savingsGoal = new SavingsGoal();
-        }
+        savingsGoal = await SavingsGoalService.LoadSavingsGoalAsync(UserName);
     }
 
     private async Task LoadUserDataAsync()
     {
-        Transactions = await DbContext.Transactions
-            .Where(t => t.UserName == UserName)
-            .OrderByDescending(t => t.Date)
-            .ToListAsync();
+        var (transactions, balance) = await UserService.LoadUserDataAsync(UserName);
 
-        FilteredTransactions = new List<Transaction>(Transactions);
-
-        Balance = Transactions
-            .Where(t => t.UserName == UserName)
-            .Sum(t => t.Type == "Income" ? t.Amount : -t.Amount);
+        Transactions = transactions;
+        FilteredTransactions = new List<Transaction>(transactions);
+        Balance = await TransactionService.RecalculateBalanceAsync(UserName);
     }
 
     private void ToggleManualBalanceForm()
@@ -367,8 +351,7 @@ else
 
     private async Task HandleManualBalanceSubmit()
     {
-        if (manualBalance.Amount <= 0) return;
-
+        Balance = await TransactionService.HandleManualBalanceSubmitAsync(UserName, manualBalance.Amount, Transactions);
         var manualTransaction = new Transaction
             {
                 UserName = UserName,
@@ -379,45 +362,25 @@ else
                 Description = "Manual Balance Addition"
             };
 
-        Balance += manualBalance.Amount;
-
-        DbContext.Transactions.Add(manualTransaction);
-        await DbContext.SaveChangesAsync();
-
         Transactions.Add(manualTransaction);
         FilteredTransactions = new List<Transaction>(Transactions);
-
         manualBalance = new Transaction();
         IsManualBalanceVisible = false;
-
         StateHasChanged();
     }
 
     private async Task UpdateSavingsGoal()
     {
-        if (savingsGoal.GoalAmount <= 0 || string.IsNullOrEmpty(UserName))
+        bool isUpdated = await SavingsGoalService.UpdateSavingsGoalAsync(UserName, savingsGoal.GoalAmount, savingsGoal.CurrentSavings, ErrorMessages);
+
+        if (isUpdated)
         {
-            ErrorMessages.Add("Please enter a valid savings goal amount.");
             StateHasChanged();
-            return;
-        }
-        var existingGoal = await DbContext.SavingsGoals
-            .FirstOrDefaultAsync(s => s.UserName == UserName);
-
-        if (existingGoal != null)
-        {
-            existingGoal.GoalAmount = savingsGoal.GoalAmount;
-            existingGoal.CurrentSavings = savingsGoal.CurrentSavings;
-
-            DbContext.SavingsGoals.Update(existingGoal);
         }
         else
         {
-            savingsGoal.UserName = UserName;
-            DbContext.SavingsGoals.Add(savingsGoal);
+            StateHasChanged();
         }
-        await DbContext.SaveChangesAsync();
-        StateHasChanged();
     }
 
     private void ShowRecentTransactions()
@@ -440,6 +403,7 @@ else
 
     private void ShowEditTransactionForm(Transaction transaction)
     {
+        ErrorMessages.Clear();
         transactionToEdit = new Transaction
             {
                 Id = transaction.Id,
@@ -456,108 +420,28 @@ else
     private async Task HandleEditTransaction()
     {
         ErrorMessages.Clear();
-
-        if (string.IsNullOrEmpty(transactionToEdit.Description))
+        var (success, errorMessages) = await TransactionService.HandleEditTransactionAsync(
+            transactionToEdit,
+            Transactions,
+            Balance,
+            ErrorMessages
+        );
+        if (!success)
         {
-            ErrorMessages.Add("You must enter the description.");
+            ErrorMessages = errorMessages;
         }
-
-        if (string.IsNullOrEmpty(transactionToEdit.Category) || transactionToEdit.Category == "Select a Category")
+        else
         {
-            ErrorMessages.Add("Please select a category for the transaction.");
+            FilteredTransactions = Transactions.Where(t => t.UserName == UserName).ToList();
+            Balance = await TransactionService.RecalculateBalanceAsync(UserName);
+            IsTransactionEditFormVisible = false;
         }
-
-        if (transactionToEdit.Type == "Expense" && Balance < transactionToEdit.Amount)
-        {
-            ErrorMessages.Add("Insufficient balance for this expense.");
-        }
-
-        if (ErrorMessages.Any())
-        {
-            StateHasChanged();
-            return;
-        }
-
-        if (string.IsNullOrEmpty(transactionToEdit.Type))
-        {
-            transactionToEdit.Type = "Income";
-        }
-
-        try
-        {
-            var originalTransaction = Transactions.FirstOrDefault(t => t.Id == transactionToEdit.Id);
-
-            if (originalTransaction != null)
-            {
-                decimal tempBalance = Balance;
-
-                if (originalTransaction.Type == "Income")
-                {
-                    tempBalance -= originalTransaction.Amount;
-                }
-                else if (originalTransaction.Type == "Expense")
-                {
-                    tempBalance += originalTransaction.Amount;
-                }
-
-                if (transactionToEdit.Type == "Income")
-                {
-                    tempBalance += transactionToEdit.Amount;
-                }
-                else if (transactionToEdit.Type == "Expense")
-                {
-                    tempBalance -= transactionToEdit.Amount;
-                }
-
-                if (tempBalance < 0)
-                {
-                    ErrorMessages.Add("Updating this transaction will result in a negative balance.");
-                    StateHasChanged();
-                    return;
-                }
-
-                if (originalTransaction.Type == "Income")
-                {
-                    Balance -= originalTransaction.Amount;
-                }
-                else if (originalTransaction.Type == "Expense")
-                {
-                    Balance += originalTransaction.Amount;
-                }
-
-                if (transactionToEdit.Type == "Income")
-                {
-                    Balance += transactionToEdit.Amount;
-                }
-                else if (transactionToEdit.Type == "Expense")
-                {
-                    Balance -= transactionToEdit.Amount;
-                }
-
-                originalTransaction.Description = transactionToEdit.Description;
-                originalTransaction.Amount = transactionToEdit.Amount;
-                originalTransaction.Category = transactionToEdit.Category;
-                originalTransaction.Type = transactionToEdit.Type;
-                originalTransaction.Date = transactionToEdit.Date;
-
-                DbContext.Transactions.Update(originalTransaction);
-                await DbContext.SaveChangesAsync();
-
-                FilteredTransactions = new List<Transaction>(Transactions);
-                IsTransactionEditFormVisible = false;
-
-                StateHasChanged();
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error: {ex.Message}");
-        }
+        StateHasChanged();
     }
-
 
     private void CancelEditTransaction()
     {
+        ErrorMessages.Clear();
         IsTransactionEditFormVisible = false;
         StateHasChanged();
     }
@@ -577,69 +461,18 @@ else
 
     private async Task HandleValidSubmit()
     {
-        ErrorMessages.Clear();
+        var (isSuccess, errorMessages, updatedFilteredTransactions) = await TransactionService.HandleValidSubmitAsync(UserName, Balance, newTransaction, Transactions);
 
-        if (string.IsNullOrEmpty(newTransaction.Description))
+        if (!isSuccess)
         {
-            ErrorMessages.Add("You must enter the description.");
+            ErrorMessages = errorMessages;
         }
-
-        isDatabaseOperationInProgress = true;
-
-        if (string.IsNullOrEmpty(newTransaction.Category) || newTransaction.Category == "Select a Category")
+        else
         {
-            ErrorMessages.Add("Please select a category for the transaction.");
-        }
-
-        if (newTransaction.Type == "Expense" && Balance < newTransaction.Amount)
-        {
-            ErrorMessages.Add("Insufficient balance for this expense.");
-        }
-
-        if (ErrorMessages.Any())
-        {
-            StateHasChanged();
-            return;
-        }
-
-        if (string.IsNullOrEmpty(newTransaction.Type))
-        {
-            newTransaction.Type = "Income";
-        }
-
-        try
-        {
-            newTransaction.UserName = UserName;
-
-            if (newTransaction.Type == "Income")
-            {
-                Balance += newTransaction.Amount;
-            }
-            else if (newTransaction.Type == "Expense")
-            {
-                Balance -= newTransaction.Amount;
-            }
-
-            newTransaction.Date = newTransaction.Date.Date;
-
-            DbContext.Transactions.Add(newTransaction);
-            await DbContext.SaveChangesAsync();
-
-            Transactions.Add(newTransaction);
-            FilteredTransactions = new List<Transaction>(Transactions);
-
-            newTransaction = new Transaction();
+            FilteredTransactions = updatedFilteredTransactions;
+            Balance = updatedFilteredTransactions.Sum(t => t.Type == "Income" ? t.Amount : -t.Amount);
             IsTransactionFormVisible = false;
         }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error: {ex.Message}");
-        }
-        finally
-        {
-            isDatabaseOperationInProgress = false;
-        }
-
         StateHasChanged();
     }
 
@@ -647,24 +480,8 @@ else
     {
         try
         {
-            // Fetch all transactions for the user from the database
-            var userTransactions = await DbContext.Transactions
-                .Where(t => t.UserName == UserName)
-                .ToListAsync();
-
-            // Remove all transactions from the database
-            DbContext.Transactions.RemoveRange(userTransactions);
-            await DbContext.SaveChangesAsync();
-
-            // Clear the local transaction lists
-            Transactions.Clear();
-            FilteredTransactions.Clear();
-
-            // Reset the balance
+            await TransactionService.ResetBalanceAsync(UserName, Transactions, FilteredTransactions);
             Balance = 0;
-
-            await DbContext.SaveChangesAsync();
-
             StateHasChanged();
         }
         catch (Exception ex)
@@ -683,19 +500,18 @@ else
     {
         if (TransactionToDelete == null) return;
 
-        DbContext.Transactions.Remove(TransactionToDelete);
-        await DbContext.SaveChangesAsync();
+        var (isSuccess, newBalance) = await TransactionService.DeleteTransactionAsync(TransactionToDelete, UserName, Transactions, FilteredTransactions);
 
-        Transactions.Remove(TransactionToDelete);
-
-        Balance = Transactions
-            .Where(t => t.UserName == UserName)
-            .Sum(t => t.Type == "Income" ? t.Amount : -t.Amount);
-
-        FilteredTransactions = new List<Transaction>(Transactions);
-
-        IsDeleteConfirmationVisible = false;
-        StateHasChanged();
+        if (isSuccess)
+        {
+            Balance = newBalance;
+            IsDeleteConfirmationVisible = false;
+            StateHasChanged();
+        }
+        else
+        {
+            Console.WriteLine("Error deleting transaction.");
+        }
     }
 
     private void CancelDelete()
