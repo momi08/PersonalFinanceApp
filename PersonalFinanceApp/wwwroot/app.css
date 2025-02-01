@@ -117,3 +117,47 @@ h1:focus {
 .navigation-menu ul li a:hover {
     text-decoration: underline;
  }
+
+.nav-scrollable {
+    background-color: #2c3e50; /* Tamno plava boja pozadine */
+    color: white; /* Bijela boja teksta */
+    height: 100vh; /* Pun visinu ekrana */
+    padding: 10px;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1); /* Blagi sjeni za dubinu */
+    display: flex;
+    flex-direction: column;
+}
+
+.nav-item {
+    padding: 12px 0;
+}
+
+.nav-item .nav-link {
+        color: white; /* Bijeli tekst za linkove */
+        padding: 8px 16px;
+        font-size: 16px;
+        text-transform: uppercase; /* Svi naslovi u velikim slovima */
+        border-radius: 4px;
+        transition: background-color 0.3s; /* Smooth transition za hover */
+    }
+
+.nav-item .nav-link:hover {
+            background-color: #34495e; /* Svjetlija nijansa plave pri hoveru */
+            text-decoration: none; /* Bez podcrtavanja */
+        }
+
+    /* Styling za ikone u sidebaru */
+.nav-item .bi {
+        margin-right: 10px; /* Razmak između ikone i teksta */
+    }
+
+/* Responsive styling: manje ekrane */
+@media (max-width: 768px) {
+.nav-scrollable {
+        display: none; /* Sakrivanje sidebar-a na manjim ekranima */
+    }
+
+.navbar-toggler {
+        display: block; /* Prikazivanje hamburger menija */
+    }
+}
