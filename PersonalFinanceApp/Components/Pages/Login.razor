@@ -41,7 +41,10 @@
             ErrorMessage = "Invalid username or password.";
             return;
         }
-        if (user.Password != Password)
+        var passwordHasher = new Microsoft.AspNetCore.Identity.PasswordHasher<User>();
+        var result = passwordHasher.VerifyHashedPassword(null, user.PasswordHash, Password);
+
+        if (result == Microsoft.AspNetCore.Identity.PasswordVerificationResult.Failed)
         {
             ErrorMessage = "Invalid username or password.";
             return;
