@@ -1,8 +1,8 @@
 body {
-    font-family: 'Arial', sans-serif;
+    font-family: 'Inter', 'Arial', sans-serif;
     margin: 0;
     padding: 0;
-    background: linear-gradient(to right,#b1b78d, #9a9f72);
+    background-color: #f5f7fa;
     color: #333;
 }
 
@@ -19,18 +19,27 @@ body {
 }
 
 .navbar {
-    background: #4e5b31;
+    background-color: #2a3f61;
     color: white;
-    padding: 15px 20px;
+    padding: 15px 30px;
     display: flex;
-    justify-content: space-between;
+    align-items: flex-start;
+    justify-content: flex-start;
     align-items: center;
+    gap: 100px;
 }
 
 .navbar-brand {
+    padding: 6px 12px;
+    background-color: #2563eb;
+    border-radius: 6px;
     color: white;
-    font-size: 1.2rem;
-    text-decoration: none;
+    font-weight: 600;
+}
+
+.navbar-brand:hover {
+    transform: scale(1.03);
+    transition: transform 0.2s ease;
 }
 
 .navbar-toggler-icon {
@@ -60,39 +69,17 @@ body {
     top: 10px;
 }
 
-.sidebar {
-    width: 250px;
-    background: #4e5b31;
-    color: white;
-    padding: 25px;
-    height: 100vh;
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 100;
-}
-
-.top-bar {
-    background: #4e5b31;
-    padding: 10px 20px;
-    text-align: right;
-}
-
 .nav-scrollable {
     margin-top: 20px;
 }
 
-.about-link {
-    color: white;
-    text-decoration: none;
-}
-
 .nav-link {
-    display: block;
-    padding: 10px;
+    display: inline-block;
+    padding: 8px 12px;
     color: white;
     text-decoration: none;
     transition: background 0.3s;
+    border-radius: 6px;
 }
 
 .nav-link:hover {
@@ -100,11 +87,22 @@ body {
     border-radius: 5px;
 }
 
+.top-bar {
+    background-color: #2a3f61;
+    padding: 10px 20px;
+    text-align: left;
+}
+
+.about-link {
+    color: white;
+    text-decoration: none;
+}
+
 main {
-    margin-left: 220px;
     padding: 20px;
     flex-grow: 1;
     transition: margin-left 0.3s ease;
+    background-color: #f5f7fa;
 }
 
 .main-content {
@@ -124,32 +122,32 @@ main {
     display: flex;
     gap: 10px;
     margin-bottom: 0;
-    padding: 0; 
-    border-radius: 8px 8px 0 0; 
-    background: linear-gradient(to right, #a5a88a, #8c8f67);
+    padding: 0;
+    border-radius: 8px 8px 0 0;
+    background-color: white;
 }
 
 .tab {
     padding: 10px 20px;
     cursor: pointer;
-    background: #e1e1e1;
-    border-radius: 8px 8px 0 0; 
+    background-color: #e2e8f0;
+    border-radius: 6px;
     text-align: center;
-    transition: background 0.3s;
+    transition: background 0.2s;
     flex-grow: 1;
 }
 
 .tab.active {
-    background-color: #3c5a47;
-    color: #fff;
+    background: #3b82f6;
+    color: white;
     font-weight: bold;
 }
 
 .tab-content {
-    background: linear-gradient(to right, #a5a88a, #8c8f67);
+    background: white;
     padding: 20px;
-    border-radius: 0 0 8px 8px; 
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     margin-bottom: 20px;
 }
 
@@ -176,18 +174,18 @@ main {
 }
 
 .btn {
-    background-color: #3c5a47;
-    color: #fff;
-    padding: 12px 17px; /* Increase padding for a bigger button */
+    background-color: #3b82f6;
+    color: white;
+    padding: 12px 17px;
     border: none;
     cursor: pointer;
     border-radius: 5px;
-    font-size: 0.9rem; /* Slightly larger font size */
+    font-size: 0.9rem;
     transition: background 0.3s;
 }
 
 .btn:hover {
-    background: #263b2f;
+    background-color: #2563eb;
 }
 
 .btn.delete-btn {
@@ -205,11 +203,11 @@ main {
 
 .transaction-list {
     margin-top: 20px;
-    background: linear-gradient(to right, #a5a88a, #8c8f67);
+    background: #f1f5f9;
 }
 
 .transaction-item {
-    background: linear-gradient(to right, #8b8f6d, #70754e);
+    background: #f1f5f9;
     padding: 10px;
     margin-bottom: 10px;
     border-radius: 5px;
@@ -233,17 +231,16 @@ main {
 .nav-menu {
     display: flex;
     flex-direction: column;
-    background: #34495e;
+    background-color: #2a3f61;
     padding: 10px;
     transition: max-height 0.3s ease-in-out;
-    background: #4e5b31;
 }
 
 .nav-menu.collapsed {
     max-height: 0;
     overflow: hidden;
-    background: linear-gradient(to right, #a5a88a, #8c8f67);
-    }
+    background-color: #2a3f61;
+}
 
 .nav-item {
     color: white;
@@ -253,6 +250,7 @@ main {
     align-items: center;
     cursor: pointer;
     font-size: 1.1rem;
+    border-radius: 6px;
 }
 
 .nav-item i {
@@ -264,26 +262,26 @@ main {
 }
 
 .login-title {
+    font-size: 1.8rem;
+    font-weight: 600;
     text-align: center;
-    font-size: 2rem;
-    color: #3c5a47;
     margin-bottom: 20px;
+    color: #1e293b;
 }
 
 .login-form {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
     max-width: 400px;
     margin: auto;
-    background: linear-gradient(to right, #a5a88a, #8c8f67);
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
 }
 
 .input-field {
-    width: 100%;
     padding: 10px;
     margin: 10px 0;
     border: 1px solid #bdc3c7;
@@ -292,19 +290,18 @@ main {
 }
 
 .login-btn {
-    width: 100%;
-    background-color: #3c5a47;
-    color: #fff;
-    padding: 10px;
+    padding: 12px;
+    background-color: #3b82f6;
+    color: white;
     border: none;
-    border-radius: 5px;
+    border-radius: 8px;
     font-size: 1rem;
     cursor: pointer;
-    transition: 0.3s ease-in-out;
+    transition: background 0.3s ease-in-out;
 }
 
 .login-btn:hover {
-    background: #2980b9;
+    background-color: #2563eb;
 }
 
 .alert {
@@ -314,47 +311,47 @@ main {
 }
 
 .register-title {
+    font-size: 1.8rem;
+    font-weight: 600;
     text-align: center;
-    font-size: 2rem;
-    color: #3c5a47;
     margin-bottom: 20px;
+    color: #1e293b;
 }
 
 .register-form {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
     max-width: 400px;
     margin: auto;
-    background: linear-gradient(to right, #a5a88a, #8c8f67);
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
 }
 
 .input-field {
-    width: 100%;
+    width: 95%;
     padding: 10px;
     margin: 10px 0;
-    border: 1px solid #bdc3c7;
-    border-radius: 5px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
     font-size: 1rem;
 }
 
 .register-btn {
-    width: 100%;
-    background-color: #3c5a47;
-    color: #fff;
-    padding: 10px;
+    padding: 12px;
+    background-color: #3b82f6;
+    color: white;
     border: none;
-    border-radius: 5px;
+    border-radius: 8px;
     font-size: 1rem;
     cursor: pointer;
-    transition: 0.3s ease-in-out;
+    transition: background 0.3s ease-in-out;
 }
 
 .register-btn:hover {
-    background: #27ae60;
+    background-color: #2563eb;
 }
 
 .error-text {
@@ -374,18 +371,20 @@ textarea:focus:invalid {
 }
 
 .alert-danger {
-    background-color: #f8d7da;
-    color: #721c24;
+    background-color: #fee2e2;
+    color: #b91c1c;
     padding: 15px;
     margin-bottom: 10px;
     border-radius: 5px;
     border: 1px solid #f5c6cb;
+    max-width: 400px;
+    text-align: center;
 }
 
 .manual-balance-form {
     margin-top: 20px;
     padding: 20px;
-    background: linear-gradient(to right, #a5a88a, #8c8f67);
+    background: white;
     border-radius: 8px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     margin-bottom: 20px;
@@ -407,7 +406,7 @@ progress::-webkit-progress-bar {
     }
 
 progress::-webkit-progress-value {
-    background-color: #3c5a47;
+    background-color: #2a3f61;
     border-radius: 10px;
 }
 
@@ -418,23 +417,27 @@ progress::-moz-progress-bar {
 
 h1 {
     font-size: 2.5rem;
-    color: #3c5a47;
-    font-weight: bold;
+    color: #1e293b;
+    font-weight: 600;
     text-align: center;
 }
 
 h2 {
-    color: #3c5a47;
+    color: #1e293b;
+    font-weight: 600;
 }
 
 h3 {
-    color: #3c5a47;
+    color: #1e293b;
+    font-weight: 600;
 }
 
 h4 {
-    color: #3c5a47;
+    color: #1e293b;
+    font-weight: 600;
 }
 
 h5 {
-    color: #3c5a47;
+    color: #1e293b;
+    font-weight: 600;
 }
