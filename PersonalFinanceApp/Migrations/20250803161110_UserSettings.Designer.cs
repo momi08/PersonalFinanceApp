@@ -12,8 +12,8 @@ using PersonalFinanceApp.Data;
 namespace PersonalFinanceApp.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250201215429_RenamePasswordColumn")]
-    partial class RenamePasswordColumn
+    [Migration("20250803161110_UserSettings")]
+    partial class UserSettings
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -105,6 +105,47 @@ namespace PersonalFinanceApp.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("PersonalFinanceApp.Data.UserSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("EmailNotifications")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Theme")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("UserSettings");
+                });
+
+            modelBuilder.Entity("PersonalFinanceApp.Data.UserSettings", b =>
+                {
+                    b.HasOne("PersonalFinanceApp.Data.User", "User")
+                        .WithOne()
+                        .HasForeignKey("PersonalFinanceApp.Data.UserSettings", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 #pragma warning restore 612, 618
         }

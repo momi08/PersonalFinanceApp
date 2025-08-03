@@ -1,1 +1,123 @@
-﻿
+﻿@page "/settings"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@using PersonalFinanceApp.Data
+@inject AppDbContext DbContext
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IJSRuntime JSRuntime
+
+<h2>Settings</h2>
+
+<div>
+    <label>
+        <input type="checkbox" @bind="emailNotifications" />
+        Receive email notifications
+    </label>
+</div>
+
+<div>
+    <label>Theme:</label>
+    <select @bind="selectedTheme">
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+    </select>
+</div>
+
+<div>
+    <label>Currency:</label>
+    <select @bind="selectedCurrency">
+        <option value="USD">USD ($)</option>
+        <option value="EUR">EUR (€)</option>
+        <option value="GBP">GBP (£)</option>
+    </select>
+</div>
+
+<button @onclick="SaveSettings">Save Settings</button>
+
+@if (!string.IsNullOrEmpty(saveMessage))
+{
+    <p>@saveMessage</p>
+}
+<p>User ID: @userId</p>
+<p>Theme: @selectedTheme</p>
+<p>Currency: @selectedCurrency</p>
+<p>Email Notifications: @emailNotifications</p>
+
+@inject IJSRuntime JSRuntime
+
+@code {
+    private bool emailNotifications = true;
+    private string selectedTheme = "light";
+    private string selectedCurrency = "USD";
+    private string? saveMessage;
+    private int? userId;
+    private bool initialized = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !initialized)
+        {
+            initialized = true;
+
+            var storedUserName = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "userName");
+
+            if (string.IsNullOrEmpty(storedUserName))
+            {
+                saveMessage = "Unable to load user settings. Please log in again.";
+                StateHasChanged();
+                return;
+            }
+
+            var userEntity = await DbContext.Users.FirstOrDefaultAsync(u => u.UserName == storedUserName);
+            if (userEntity == null)
+            {
+                saveMessage = "User not found.";
+                StateHasChanged();
+                return;
+            }
+
+            userId = userEntity.Id;
+
+            var settings = await DbContext.UserSettings.FirstOrDefaultAsync(s => s.UserId == userId);
+            if (settings != null)
+            {
+                emailNotifications = settings.EmailNotifications;
+                selectedTheme = settings.Theme;
+                selectedCurrency = settings.Currency;
+            }
+            else
+            {
+                settings = new UserSettings
+                {
+                    UserId = userId.Value,
+                    EmailNotifications = true,
+                    Theme = "light",
+                    Currency = "EUR"
+                };
+
+                DbContext.UserSettings.Add(settings);
+                await DbContext.SaveChangesAsync();
+            }
+
+            StateHasChanged();
+        }
+    }
+
+    private async Task SaveSettings()
+    {
+        if (userId == null) return;
+
+        var settings = await DbContext.UserSettings.FirstOrDefaultAsync(s => s.UserId == userId);
+        if (settings != null)
+        {
+            settings.EmailNotifications = emailNotifications;
+            settings.Theme = selectedTheme;
+            settings.Currency = selectedCurrency;
+
+            await DbContext.SaveChangesAsync();
+
+            saveMessage = "Settings saved successfully!";
+        }
+    }
+}
