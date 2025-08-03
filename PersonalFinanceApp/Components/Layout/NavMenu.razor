@@ -7,37 +7,31 @@
 @inject AppDbContext DbContext
 @inject AuthenticationStateProvider AuthStateProvider
 
-<header class="navbar">
-</header>
-
-<nav class="nav-menu @NavMenuCssClass">
+<nav class="navbar">
+    <div class="navbar-brand">💰 Personal Finance App</div>
     @if (!IsUserLoggedIn)
-    {
-        <NavLink class="nav-item" href="/" Match="NavLinkMatch.All">
-            <i class="bi bi-house-door-fill"></i> Home
-        </NavLink>
-    }
-
-    @if (IsUserLoggedIn)
-    {
-        <NavLink class="nav-item" href="/dashboard">
-            <i class="bi bi-speedometer2"></i> Dashboard
-        </NavLink>
-
-        <NavLink class="nav-item" @onclick="Logout">
-            <i class="bi bi-box-arrow-right"></i> Logout
-        </NavLink>
-    }
-    else
-    {
-        <NavLink class="nav-item" href="/register">
-            <i class="bi bi-person-plus-fill"></i> Register
-        </NavLink>
-
-        <NavLink class="nav-item" href="/login">
-            <i class="bi bi-box-arrow-in-right"></i> Login
-        </NavLink>
-    }
+        {
+            <div class="navbar-links">
+                <NavLink href="/" Match="NavLinkMatch.All" class="nav-link">Home</NavLink>
+                <NavLink href="/register" class="nav-link">Register</NavLink>
+                <NavLink href="/login" class="nav-link">Login</NavLink>
+            </div>
+            <div class="navbar-right">
+                <NavLink href="/about" class="nav-link">About</NavLink>
+            </div>
+        }
+        else
+        {
+            <div class="navbar-links">
+                <NavLink href="/dashboard" class="nav-link">Dashboard</NavLink>
+                <NavLink href="/reports" class="nav-link">Reports</NavLink>
+                <NavLink href="/profile" class="nav-link">Profile</NavLink>
+                <NavLink href="/settings" class="nav-link">Settings</NavLink>
+            </div>
+        <div class="navbar-right">
+            <NavLink href="#" @onclick="Logout" class="nav-link">Logout</NavLink>
+        </div>
+        }
 </nav>
 
 @code {

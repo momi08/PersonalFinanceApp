@@ -21,6 +21,11 @@
     <input class="input-field" type="password" placeholder="Enter password" @bind="Password" />
     <button class="btn login-btn" @onclick="LoginUser">Login</button>
 </div>
+<div class="login-register-redirect">
+    New to the Personal Finance App?
+    <a href="/register" class="register-link">Register now</a>
+</div>
+
 
 @code {
     private string UserName { get; set; }
