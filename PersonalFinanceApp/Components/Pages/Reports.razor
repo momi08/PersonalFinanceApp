@@ -6,24 +6,26 @@
 @inject TransactionService TransactionService
 @inject IJSRuntime JSRuntime
 
-<h3>Reports</h3>
+<h2>Reports</h2>
 @if (isLoading)
 {
     <p>Loading reports...</p>
 }
 else
 {
-    <div style="width: 400px; height:400px;">
-        <h4>Income Over Time</h4>
-        <BarChart TItem="double" @ref="incomeChart" />
-    </div>
-    <div style="width: 400px; height:400px;">
-        <h4>Expenses Over Time</h4>
-        <BarChart TItem="double" @ref="expenseChart" />
-    </div>
-    <div style="width: 400px; height:400px;">
-        <h4>Spending by Category</h4>
-        <BarChart TItem="double" @ref="categoryChart" />
+    <div class="chart-container">
+        <div class="chart-item">
+            <h4>Income Over Time</h4>
+            <BarChart TItem="double" @ref="incomeChart" />
+        </div>
+        <div class="chart-item">
+            <h4>Expenses Over Time</h4>
+            <BarChart TItem="double" @ref="expenseChart" />
+        </div>
+        <div class="chart-item">
+            <h4>Spending by Category</h4>
+            <BarChart TItem="double" @ref="categoryChart" />
+        </div>
     </div>
 }
 
