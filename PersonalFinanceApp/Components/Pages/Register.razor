@@ -90,7 +90,7 @@
         DbContext.Users.Add(newUser);
         await DbContext.SaveChangesAsync();
         await ((Authentication)AuthStateProvider).MarkUserAsAuthenticated(UserName);
-        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "userName", UserName);
+        await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "userName", UserName);
         UriHelper.NavigateTo("/dashboard", forceLoad: true);
     }
 }

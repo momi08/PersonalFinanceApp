@@ -78,7 +78,7 @@ else
 
         initialized = true;
 
-        var storedUserName = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "userName");
+        var storedUserName = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "userName");
         if (string.IsNullOrEmpty(storedUserName))
         {
             saveMessage = "Unable to load user settings. Please log in again.";

@@ -2,6 +2,7 @@
 @using PersonalFinanceApp.Data
 @using Microsoft.AspNetCore.Components.Authorization;
 @rendermode InteractiveServer
+@inject Authentication AuthenticationStateProvider
 @inject NavigationManager UriHelper
 @inject AppDbContext DbContext
 @inject IJSRuntime JSRuntime
@@ -53,6 +54,7 @@
             ErrorMessage = "Invalid username or password.";
             return;
         }
+
         var loginHistory = new LoginHistory
         {
             UserId = user.Id,
@@ -62,8 +64,9 @@
 
         DbContext.LoginHistories.Add(loginHistory);
         await DbContext.SaveChangesAsync();
+        await AuthenticationStateProvider.MarkUserAsAuthenticated(UserName);
+        await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "userName", UserName);
 
-        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "userName", UserName);
         UriHelper.NavigateTo("/dashboard");
     }
 }

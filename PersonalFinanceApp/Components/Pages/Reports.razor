@@ -1,1 +1,140 @@
-﻿
+﻿@page "/reports"
+@rendermode InteractiveServer
+
+@using PersonalFinanceApp.Data
+@using Blazorise.Charts
+@inject TransactionService TransactionService
+@inject IJSRuntime JSRuntime
+
+<h3>Reports</h3>
+@if (isLoading)
+{
+    <p>Loading reports...</p>
+}
+else
+{
+    <div style="width: 400px; height:400px;">
+        <h4>Income Over Time</h4>
+        <BarChart TItem="double" @ref="incomeChart" />
+    </div>
+    <div style="width: 400px; height:400px;">
+        <h4>Expenses Over Time</h4>
+        <BarChart TItem="double" @ref="expenseChart" />
+    </div>
+    <div style="width: 400px; height:400px;">
+        <h4>Spending by Category</h4>
+        <BarChart TItem="double" @ref="categoryChart" />
+    </div>
+}
+
+@code {
+    private bool isLoading = true;
+    private List<Transaction> transactions = new();
+    private BarChart<double> incomeChart;
+    private BarChart<double> expenseChart;
+    private BarChart<double> categoryChart;
+    private List<string> months = new();
+    private List<double> incomeValues = new();
+    private List<double> expenseValues = new();
+    private List<string> categories = new();
+    private List<double> categoryAmounts = new();
+    private bool _initialized = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_initialized)
+        {
+            try
+            {
+                var userName = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "userName");
+                if (string.IsNullOrWhiteSpace(userName))
+                {
+                    Console.Error.WriteLine("No userName found in sessionStorage.");
+                    isLoading = false;
+                    StateHasChanged();
+                    return;
+                }
+                transactions = await TransactionService.GetTransactionsAsync(userName);
+
+                PrepareChartData();
+                isLoading = false;
+                StateHasChanged();
+
+                await UpdateCharts();
+
+                _initialized = true;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error loading reports: {ex.Message}");
+                isLoading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+
+    private void PrepareChartData()
+    {
+        var groupedByMonth = transactions
+            .GroupBy(t => new DateTime(t.Date.Year, t.Date.Month, 1))
+            .OrderBy(g => g.Key);
+
+        months = groupedByMonth.Select(g => g.Key.ToString("MMM yyyy")).ToList();
+
+        incomeValues = groupedByMonth
+            .Select(g => g.Where(t => t.Type == "Income").Sum(t => (double)t.Amount))
+            .ToList();
+
+        expenseValues = groupedByMonth
+            .Select(g => g.Where(t => t.Type == "Expense").Sum(t => (double)t.Amount))
+            .ToList();
+
+        var expensesByCategory = transactions
+            .Where(t => t.Type == "Expense")
+            .GroupBy(t => t.Category)
+            .Select(g => new { Category = g.Key, Amount = g.Sum(t => (double)t.Amount) })
+            .OrderByDescending(x => x.Amount)
+            .ToList();
+
+        categories = expensesByCategory.Select(x => x.Category).ToList();
+        categoryAmounts = expensesByCategory.Select(x => x.Amount).ToList();
+    }
+
+    private async Task UpdateCharts()
+    {
+        await incomeChart.Clear();
+        await incomeChart.AddLabelsDatasetsAndUpdate(
+            months,
+            new BarChartDataset<double>
+            {
+                Label = "Income",
+                Data = incomeValues,
+                BackgroundColor = "rgba(75, 192, 192, 0.2)",
+                BorderColor = "rgba(75, 192, 192, 1)",
+
+            }
+        );
+        await expenseChart.Clear();
+        await expenseChart.AddLabelsDatasetsAndUpdate(
+            months,
+            new BarChartDataset<double>
+            {
+                Label = "Expenses",
+                Data = expenseValues,
+                BackgroundColor = "rgba(255, 99, 132, 0.2)",
+                BorderColor = "rgba(255, 99, 132, 1)",
+            }
+        );
+        await categoryChart.Clear();
+        await categoryChart.AddLabelsDatasetsAndUpdate(
+            categories,
+            new BarChartDataset<double>
+            {
+                Label = "Spending",
+                Data = categoryAmounts,
+                BackgroundColor = categories.Select(_ => "rgba(54, 162, 235, 0.6)").ToList()
+            }
+        );
+    }
+}

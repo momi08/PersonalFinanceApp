@@ -7,26 +7,57 @@ namespace PersonalFinanceApp.Data
 {
     public class Authentication : AuthenticationStateProvider
     {
-        private ClaimsPrincipal _currentUser = new ClaimsPrincipal(new ClaimsIdentity());
-        public override Task<AuthenticationState> GetAuthenticationStateAsync()
+        private readonly IJSRuntime _jsRuntime;
+
+        public Authentication(IJSRuntime jsRuntime)
         {
-            return Task.FromResult(new AuthenticationState(_currentUser));
+            _jsRuntime = jsRuntime;
         }
-        public Task MarkUserAsAuthenticated(string username)
+
+        public override async Task<AuthenticationState> GetAuthenticationStateAsync()
         {
+            var username = await _jsRuntime.InvokeAsync<string>("sessionStorage.getItem", "userName");
+
+            ClaimsPrincipal user;
+
+            if (!string.IsNullOrEmpty(username))
+            {
+                var identity = new ClaimsIdentity(new[]
+                {
+                    new Claim(ClaimTypes.Name, username)
+                }, "serverAuth");
+
+                user = new ClaimsPrincipal(identity);
+            }
+            else
+            {
+                user = new ClaimsPrincipal(new ClaimsIdentity());
+            }
+
+            return new AuthenticationState(user);
+        }
+
+        public async Task MarkUserAsAuthenticated(string username)
+        {
+            await _jsRuntime.InvokeVoidAsync("sessionStorage.setItem", "userName", username);
+
             var identity = new ClaimsIdentity(new[]
             {
                 new Claim(ClaimTypes.Name, username)
             }, "serverAuth");
-            _currentUser = new ClaimsPrincipal(identity);
-            NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(_currentUser)));
-            return Task.CompletedTask;
+
+            var user = new ClaimsPrincipal(identity);
+
+            NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(user)));
         }
-        public Task MarkUserAsLoggedOut()
+
+        public async Task MarkUserAsLoggedOut()
         {
-            _currentUser = new ClaimsPrincipal(new ClaimsIdentity());
-            NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(_currentUser)));
-            return Task.CompletedTask;
+            await _jsRuntime.InvokeVoidAsync("sessionStorage.removeItem", "userName");
+
+            var anonymous = new ClaimsPrincipal(new ClaimsIdentity());
+
+            NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(anonymous)));
         }
     }
 }

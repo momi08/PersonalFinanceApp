@@ -2,6 +2,7 @@
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.JSInterop
 @using Microsoft.AspNetCore.Components.Authorization;
+@using MicrosoftValidationSummary = Microsoft.AspNetCore.Components.Forms.ValidationSummary
 @inject IJSRuntime JSRuntime
 @inject NavigationManager UriHelper
 @inject AppDbContext DbContext
@@ -418,7 +419,7 @@ else
             isDatabaseOperationInProgress = true;
             try
             {
-                UserName = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "userName");
+                UserName = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "userName");
 
                 if (string.IsNullOrEmpty(UserName))
                 {

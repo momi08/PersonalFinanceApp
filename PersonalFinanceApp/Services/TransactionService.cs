@@ -282,4 +282,9 @@ public class TransactionService
             return (false, 0);
         }
     }
+    public async Task<List<Transaction>> GetTransactionsAsync(string userName)
+    {
+        return await _dbContext.Transactions.Where(t => t.UserName == userName).ToListAsync();
+    }
+
 }
