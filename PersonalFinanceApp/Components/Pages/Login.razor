@@ -44,6 +44,7 @@
             ErrorMessage = "Invalid username or password.";
             return;
         }
+
         var passwordHasher = new Microsoft.AspNetCore.Identity.PasswordHasher<User>();
         var result = passwordHasher.VerifyHashedPassword(null, user.PasswordHash, Password);
 
@@ -52,6 +53,16 @@
             ErrorMessage = "Invalid username or password.";
             return;
         }
+        var loginHistory = new LoginHistory
+        {
+            UserId = user.Id,
+            LoginTime = DateTime.UtcNow,
+            IPAddress = await JSRuntime.InvokeAsync<string>("getUserIP")
+        };
+
+        DbContext.LoginHistories.Add(loginHistory);
+        await DbContext.SaveChangesAsync();
+
         await JSRuntime.InvokeVoidAsync("localStorage.setItem", "userName", UserName);
         UriHelper.NavigateTo("/dashboard");
     }

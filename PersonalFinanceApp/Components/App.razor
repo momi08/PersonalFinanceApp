@@ -11,7 +11,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="/" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href=app.css
+    <link rel="stylesheet" href=app.css />
     <link rel="icon" type="image/png" href="favicon.png" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <HeadOutlet />
@@ -21,6 +21,29 @@
 <body>
     <Routes />
     <script src="_framework/blazor.web.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            document.querySelectorAll('.utc-time').forEach(el => {
+                const utc = el.getAttribute("data-time");
+                if (utc) {
+                    const local = new Date(utc).toLocaleString();
+                    el.textContent = local;
+                }
+            });
+        });
+    </script>
+    <script>
+        async function getUserIP() {
+            try {
+                const res = await fetch('https://api.ipify.org?format=json');
+                const data = await res.json();
+                return data.ip;
+            } catch {
+                return "unknown";
+            }
+        }
+    </script>
+    
 </body>
 
 </html>

@@ -8,6 +8,7 @@ namespace PersonalFinanceApp.Data
         public DbSet<Transaction> Transactions { get; set; }
         public DbSet<SavingsGoal> SavingsGoals { get; set; }
         public DbSet<UserSettings> UserSettings { get; set; }
+        public DbSet<LoginHistory> LoginHistories { get; set; }
 
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 

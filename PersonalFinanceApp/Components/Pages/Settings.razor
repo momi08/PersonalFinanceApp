@@ -1,31 +1,17 @@
 ﻿@page "/settings"
 @rendermode InteractiveServer
-@using Microsoft.AspNetCore.Components.Authorization
+
 @using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.Authorization
 @using PersonalFinanceApp.Data
 @inject AppDbContext DbContext
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IJSRuntime JSRuntime
 
-<h2>Settings</h2>
+<h2>Account Settings</h2>
 
 <div>
-    <label>
-        <input type="checkbox" @bind="emailNotifications" />
-        Receive email notifications
-    </label>
-</div>
-
-<div>
-    <label>Theme:</label>
-    <select @bind="selectedTheme">
-        <option value="light">Light</option>
-        <option value="dark">Dark</option>
-    </select>
-</div>
-
-<div>
-    <label>Currency:</label>
+    <label>Preferred Currency:</label>
     <select @bind="selectedCurrency">
         <option value="USD">USD ($)</option>
         <option value="EUR">EUR (€)</option>
@@ -33,75 +19,106 @@
     </select>
 </div>
 
-<button @onclick="SaveSettings">Save Settings</button>
-
+<button class="btn btn-primary mt-2" @onclick="SaveSettings">Save Preferences</button>
 @if (!string.IsNullOrEmpty(saveMessage))
 {
     <p>@saveMessage</p>
 }
-<p>User ID: @userId</p>
-<p>Theme: @selectedTheme</p>
-<p>Currency: @selectedCurrency</p>
-<p>Email Notifications: @emailNotifications</p>
 
-@inject IJSRuntime JSRuntime
+<hr />
+
+<h3>Change Password</h3>
+<div>
+    <input type="password" class="input-field" placeholder="Current password" @bind="currentPassword" />
+    <input type="password" class="input-field" placeholder="New password" @bind="newPassword" />
+    <input type="password" class="input-field" placeholder="Confirm new password" @bind="confirmPassword" />
+</div>
+
+<button class="btn btn-secondary mt-2" @onclick="ChangePassword">Change Password</button>
+@if (!string.IsNullOrEmpty(passwordMessage))
+{
+    <p>@passwordMessage</p>
+}
+
+<hr />
+
+<h3>Login History</h3>
+@if (loginHistory.Any())
+{
+    <ul>
+        @foreach (var entry in loginHistory)
+        {
+            <li>
+                <span class="utc-time">@entry.LoginTime.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</span> - @entry.IPAddress
+            </li>
+        }
+    </ul>
+}
+else
+{
+    <p>No login history found.</p>
+}
 
 @code {
-    private bool emailNotifications = true;
-    private string selectedTheme = "light";
     private string selectedCurrency = "USD";
     private string? saveMessage;
+    private string currentPassword;
+    private string newPassword;
+    private string confirmPassword;
+    private string passwordMessage;
     private int? userId;
+    private User? currentUser;
     private bool initialized = false;
+    private List<LoginHistory> loginHistory = new();
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && !initialized)
+        if (!firstRender || initialized)
+            return;
+
+        initialized = true;
+
+        var storedUserName = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "userName");
+        if (string.IsNullOrEmpty(storedUserName))
         {
-            initialized = true;
-
-            var storedUserName = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "userName");
-
-            if (string.IsNullOrEmpty(storedUserName))
-            {
-                saveMessage = "Unable to load user settings. Please log in again.";
-                StateHasChanged();
-                return;
-            }
-
-            var userEntity = await DbContext.Users.FirstOrDefaultAsync(u => u.UserName == storedUserName);
-            if (userEntity == null)
-            {
-                saveMessage = "User not found.";
-                StateHasChanged();
-                return;
-            }
-
-            userId = userEntity.Id;
-
-            var settings = await DbContext.UserSettings.FirstOrDefaultAsync(s => s.UserId == userId);
-            if (settings != null)
-            {
-                emailNotifications = settings.EmailNotifications;
-                selectedTheme = settings.Theme;
-                selectedCurrency = settings.Currency;
-            }
-            else
-            {
-                settings = new UserSettings
-                {
-                    UserId = userId.Value,
-                    EmailNotifications = true,
-                    Theme = "light",
-                    Currency = "EUR"
-                };
-
-                DbContext.UserSettings.Add(settings);
-                await DbContext.SaveChangesAsync();
-            }
-
+            saveMessage = "Unable to load user settings. Please log in again.";
             StateHasChanged();
+            return;
         }
+
+        currentUser = await DbContext.Users.FirstOrDefaultAsync(u => u.UserName == storedUserName);
+        if (currentUser == null)
+        {
+            saveMessage = "User not found.";
+            StateHasChanged();
+            return;
+        }
+
+        userId = currentUser.Id;
+
+        var settings = await DbContext.UserSettings.FirstOrDefaultAsync(s => s.UserId == userId);
+        if (settings != null)
+        {
+            selectedCurrency = settings.Currency;
+        }
+        else
+        {
+            var newSettings = new UserSettings
+            {
+                UserId = userId.Value,
+                Currency = "USD"
+            };
+            DbContext.UserSettings.Add(newSettings);
+            await DbContext.SaveChangesAsync();
+        }
+
+        loginHistory = await DbContext.LoginHistories
+            .Where(h => h.UserId == userId)
+            .OrderByDescending(h => h.LoginTime)
+            .Take(10)
+            .ToListAsync();
+
+        StateHasChanged();
     }
 
     private async Task SaveSettings()
@@ -111,13 +128,47 @@
         var settings = await DbContext.UserSettings.FirstOrDefaultAsync(s => s.UserId == userId);
         if (settings != null)
         {
-            settings.EmailNotifications = emailNotifications;
-            settings.Theme = selectedTheme;
             settings.Currency = selectedCurrency;
-
             await DbContext.SaveChangesAsync();
-
             saveMessage = "Settings saved successfully!";
         }
+    }
+
+    private async Task ChangePassword()
+    {
+        passwordMessage = null;
+
+        if (currentUser == null)
+        {
+            passwordMessage = "User not found.";
+            return;
+        }
+
+        var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<User>();
+        var result = hasher.VerifyHashedPassword(null, currentUser.PasswordHash, currentPassword);
+
+        if (result == Microsoft.AspNetCore.Identity.PasswordVerificationResult.Failed)
+        {
+            passwordMessage = "Current password is incorrect.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < 8)
+        {
+            passwordMessage = "New password must be at least 6 characters.";
+            return;
+        }
+
+        if (newPassword != confirmPassword)
+        {
+            passwordMessage = "New passwords do not match.";
+            return;
+        }
+
+        currentUser.PasswordHash = hasher.HashPassword(currentUser, newPassword);
+        await DbContext.SaveChangesAsync();
+
+        passwordMessage = "Password changed successfully!";
+        currentPassword = newPassword = confirmPassword = string.Empty;
     }
 }
