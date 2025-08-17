@@ -108,7 +108,9 @@ else
                                     <option value="">Select a Category</option>
                                     @foreach (var category in Categories)
                                     {
-                                        <option value="@category">@category</option>
+                                        <option value="@category.Name">
+                                            @category.Name
+                                        </option>
                                     }
                                 </InputSelect>
                             </div>
@@ -139,7 +141,9 @@ else
                         {
                             <div class="transaction-item">
                                 <p class="transaction-text">
-                                    @transaction.Description - €@transaction.Amount (@transaction.Category) (@transaction.Type) on @transaction.Date.ToString("yyyy-MM-dd HH:mm:ss")
+                                    <span>@GetCategoryIcon(transaction.Category)</span>
+                                    @transaction.Description - €@transaction.Amount (@transaction.Category) (@transaction.Type)
+                                    on @transaction.Date.ToString("yyyy-MM-dd HH:mm:ss")
                                 </p>
                                 <div class="transaction-buttons">
                                     @if (!transaction.IsManuallyAdded)
@@ -186,7 +190,7 @@ else
                                     <option value="">Select a Category</option>
                                     @foreach (var category in Categories)
                                     {
-                                        <option value="@category">@category</option>
+                                        <option value="@category.Name">@category.Name</option>
                                     }
                                 </InputSelect>
                             </div>
@@ -264,12 +268,14 @@ else
                     </div>
 
                     <div class="form-group">
-                        <label for="filterType">Category</label>
+                        <label for="category">Category</label>
                         <InputSelect @bind-Value="selectedCategory" class="input">
                             <option value="All">All</option>
                             @foreach (var category in Categories)
                             {
-                                <option value="@category">@category</option>
+                                <option value="@category.Name">
+                                    @category.Name
+                                </option>
                             }
                         </InputSelect>
                     </div>
@@ -292,8 +298,12 @@ else
                         @foreach (var transaction in FilteredTransactions)
                         {
                             <li class="transaction-item">
-                                @transaction.Description - €@transaction.Amount (@transaction.Category) (@transaction.Type) on @transaction.Date.ToString("yyyy-MM-dd HH:mm:ss")
-                                <div class="transaction-buttons">
+                                <p class="transaction-text">
+                                    <span>@GetCategoryIcon(transaction.Category)</span>
+                                    @transaction.Description - €@transaction.Amount (@transaction.Category) (@transaction.Type)
+                                    on @transaction.Date.ToString("yyyy-MM-dd HH:mm:ss")
+                                </p>
+                                    <div class="transaction-buttons">
                                     @if (!transaction.IsManuallyAdded)
                                     {
                                         <button class="btn" @onclick="() => ShowEditTransactionForm(transaction)">
@@ -338,11 +348,13 @@ else
                             </div>
                             <div class="form-group">
                                 <label for="category">Category</label>
-                                <InputSelect id="category" @bind-Value="transactionToEdit.Category" class="form-control">
+                                <InputSelect id="category" @bind-Value="transactionToEdit.Category" class="input">
                                     <option value="">Select a Category</option>
                                     @foreach (var category in Categories)
                                     {
-                                        <option value="@category">@category</option>
+                                        <option value="@category.Name">
+                                            @category.Name
+                                        </option>
                                     }
                                 </InputSelect>
                             </div>
@@ -394,19 +406,52 @@ else
     private string searchKeyword = "";
     private DateTime? startDate = null;
     private DateTime? endDate = null;
-    private List<string> Categories { get; set; } = new List<string>
+    private List<CategoryItem> Categories { get; set; } = new()
     {
-        "Housing", "Salary", "Food", "Transportation", "Health & Medical", "Insurance", "Entertainment",
-        "Clothing", "Personal Care", "Education", "Debt Repayment", "Savings & Investments",
-        "Childcare", "Pets", "Travel"
+    new CategoryItem { Name = "Housing", Icon = "icon-housing" },
+    new CategoryItem { Name = "Salary", Icon = "icon-salary" },
+    new CategoryItem { Name = "Food", Icon = "icon-food" },
+    new CategoryItem { Name = "Transportation", Icon = "icon-transport" },
+    new CategoryItem { Name = "Health & Medical", Icon = "icon-health" },
+    new CategoryItem { Name = "Insurance", Icon = "icon-insurance" },
+    new CategoryItem { Name = "Entertainment", Icon = "icon-entertainment" },
+    new CategoryItem { Name = "Clothing", Icon = "icon-clothing" },
+    new CategoryItem { Name = "Personal Care", Icon = "icon-care" },
+    new CategoryItem { Name = "Education", Icon = "icon-education" },
+    new CategoryItem { Name = "Debt Repayment", Icon = "icon-debt" },
+    new CategoryItem { Name = "Savings & Investments", Icon = "icon-savings" },
+    new CategoryItem { Name = "Childcare", Icon = "icon-childcare" },
+    new CategoryItem { Name = "Pets", Icon = "icon-pets" },
+    new CategoryItem { Name = "Travel", Icon = "icon-travel" }
     };
+    private string GetCategoryIcon(string category)
+    {
+        return category switch
+        {
+            "Housing" => "🏠",
+            "Salary" => "💼",
+            "Food" => "🍔",
+            "Transportation" => "🚌",
+            "Health & Medical" => "💊",
+            "Insurance" => "🛡️",
+            "Entertainment" => "🎬",
+            "Clothing" => "👕",
+            "Personal Care" => "💄",
+            "Education" => "🎓",
+            "Debt Repayment" => "💳",
+            "Savings & Investments" => "💰",
+            "Childcare" => "👶",
+            "Pets" => "🐶",
+            "Travel" => "✈️",
+            _ => "💵"
+        };
+    }
     private Transaction newTransaction = new Transaction();
     private Transaction manualBalance = new Transaction();
     private bool isDatabaseOperationInProgress = false;
     private string selectedCategory = "All";
     private string selectedType = "All";
     private int currentTab = 1; 
-
     private void SetCurrentTab(int tabNumber)
     {
         currentTab = tabNumber;
